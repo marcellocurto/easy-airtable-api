@@ -36,5 +36,8 @@
     "jsxBracketSameLine": false,
     "jsxSingleQuote": true,
     "printWidth": 80
+  },
+  "devDependencies": {
+    "@types/node": "^20.5.9"
   }
 }
