@@ -5,6 +5,7 @@
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
   "scripts": {
+    "watch": "tsc --watch",
     "build": "tsc"
   },
   "keywords": [
@@ -16,5 +17,24 @@
   },
   "homepage": "https://github.com/marcellocurto/easy-airtable-api",
   "author": "Marcello Curto",
-  "license": "MIT"
+  "license": "MIT",
+  "prettier": {
+    "trailingComma": "es5",
+    "tabWidth": 2,
+    "useTabs": false,
+    "semi": true,
+    "singleQuote": true,
+    "proseWrap": "preserve",
+    "quoteProps": "as-needed",
+    "arrowParens": "always",
+    "bracketSpacing": true,
+    "endOfLine": "lf",
+    "htmlWhitespaceSensitivity": "css",
+    "insertPragma": false,
+    "singleAttributePerLine": false,
+    "bracketSameLine": false,
+    "jsxBracketSameLine": false,
+    "jsxSingleQuote": true,
+    "printWidth": 80
+  }
 }
