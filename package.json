@@ -1,0 +1,17 @@
+{
+  "name": "easy-airtable-api",
+  "version": "0.0.1",
+  "description": "An easy way to connect to Airtable via their API.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "airtable"
+  ],
+  "author": "Marcello Curto",
+  "license": "ISC",
+  "devDependencies": {
+    "typescript": "^5.2.2"
+  }
+}
