@@ -2,16 +2,19 @@
   "name": "easy-airtable-api",
   "version": "0.0.1",
   "description": "An easy way to connect to Airtable via their API.",
-  "main": "index.js",
+  "main": "./lib/index.js",
+  "types": "./lib/index.d.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc"
   },
   "keywords": [
     "airtable"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/marcellocurto/easy-airtable-api.git"
+  },
+  "homepage": "https://github.com/marcellocurto/easy-airtable-api",
   "author": "Marcello Curto",
-  "license": "ISC",
-  "devDependencies": {
-    "typescript": "^5.2.2"
-  }
+  "license": "MIT"
 }
