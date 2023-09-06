@@ -20,5 +20,10 @@ export default class Airtable {
         id: string;
         fields: object;
     }[]): Promise<AirtableRecord[]>;
+    replaceRecord(recordId: string, fields: object): Promise<AirtableRecord>;
+    replaceRecords(records: {
+        id: string;
+        fields: object;
+    }[]): Promise<AirtableRecord[]>;
 }
 export {};

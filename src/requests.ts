@@ -7,14 +7,14 @@ import {
   ApiRequest,
   BaseId,
   FieldsToMergeOn,
-  RequestMethod,
+  RequestMethodProps,
   TableId,
   UpdateRecords,
   UpdateRecordsBodyUpsert,
   UpserptRecords,
 } from './types';
 
-const apiRequest = async ({
+export const apiRequest = async ({
   method,
   url,
   body,
@@ -53,9 +53,7 @@ const apiRequest = async ({
 
     req.on('error', (error: Error) => {
       reject(
-        new Error(
-          `airtableApi: ${error.code} - ${error.message} (fn_${apiRequest.name})`
-        )
+        new Error(`airtableApi: ${error.message} (fn_${apiRequest.name})`)
       );
     });
 
@@ -65,22 +63,6 @@ const apiRequest = async ({
 
     req.end();
   });
-};
-
-export const getRequest = async ({ url }: RequestMethod) => {
-  return await apiRequest({ url, method: 'GET' });
-};
-
-export const postRequest = async ({ url, body }: RequestMethod) => {
-  return await apiRequest({ url, body, method: 'POST' });
-};
-
-export const patchRequest = async ({ url, body }: RequestMethod) => {
-  return await apiRequest({ url, body, method: 'PATCH' });
-};
-
-export const putRequest = async ({ url, body }: RequestMethod) => {
-  return await apiRequest({ url, body, method: 'PUT' });
 };
 
 export const patchAirtableRequest = async ({

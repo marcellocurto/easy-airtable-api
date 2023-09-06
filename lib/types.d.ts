@@ -70,8 +70,10 @@ export type ApiRequest = {
     apiKey: string;
     body?: RequestBody;
 };
-export interface RequestMethod {
+export type RequestMethods = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+export interface RequestMethodProps {
     url: string;
+    apiKey: string;
     body?: RequestBody;
 }
 export type RequestBody = unknown;
