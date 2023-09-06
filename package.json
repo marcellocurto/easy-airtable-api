@@ -1,12 +1,13 @@
 {
   "name": "easy-airtable-api",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "An easy way to connect to Airtable via their API.",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
   "scripts": {
     "watch": "tsc --watch",
-    "build": "tsc"
+    "build": "tsc",
+    "test": "ts-node tests/run.ts"
   },
   "keywords": [
     "airtable"
@@ -38,6 +39,8 @@
     "printWidth": 80
   },
   "devDependencies": {
-    "@types/node": "^20.5.9"
+    "@types/node": "20.5.9",
+    "ts-node": "10.9.1",
+    "typescript": "5.2.2"
   }
 }
