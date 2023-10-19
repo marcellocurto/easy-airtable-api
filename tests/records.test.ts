@@ -1,5 +1,6 @@
 import { config } from 'dotenv';
 config();
+import { expect, test } from 'vitest';
 
 import Airtable from '../lib/main';
 
@@ -24,4 +25,7 @@ async function runTests() {
   console.log(records);
 }
 
-runTests();
+test('/scrape POST test', async () => {
+  await runTests();
+  expect(true).toBe(true);
+});

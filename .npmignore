@@ -1,3 +1,7 @@
 /node_modules
 /src/
+/tests/
+.eslintrc.js
+.env
 tsconfig.json
+vitest.config.ts

@@ -7,7 +7,6 @@ import {
   ApiRequest,
   BaseId,
   FieldsToMergeOn,
-  RequestMethodProps,
   TableId,
   UpdateRecords,
   UpdateRecordsBodyUpsert,
