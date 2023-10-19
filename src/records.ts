@@ -1,5 +1,3 @@
-import { getRequest } from './requests';
-
 export const getAirtableRecords = async ({
   recordId,
   baseId,
@@ -55,65 +53,4 @@ export const getAllAirtableRecords = async ({
   }
 
   return records;
-};
-
-import { UpdateRecords } from './types';
-
-type SingleLineText = string;
-type MultilineText = string;
-type RichText = string;
-type SingleSelect = string;
-type MultipleSelects = string[];
-type MultipleLookupValues = string[];
-type Checkbox = boolean;
-type AirtableUrl = string;
-type Count = number;
-type Formula = string | string[] | number;
-type MultipleRecordLinks = string[];
-type MultipleAttachments = Attachment[];
-type Rollup = string | number;
-type AirtableInteger = number | null;
-
-export interface Attachment {
-  id: string;
-  url: string;
-  filename: string;
-  size: number;
-  type: string;
-  thumbnails?: {
-    small: Thumbnail;
-    large: Thumbnail;
-    full: Thumbnail;
-  };
-}
-
-export interface Thumbnail {
-  url: string;
-  width: number;
-  height: number;
-}
-
-export type WriteJsonFile = {
-  content: string;
-  path: string;
-  filename: string;
-};
-
-export const getArrayInChunks = async (records: UpdateRecords) => {
-  const chunks = [];
-  const chunkSize = 10;
-  for (let i = 0; i < records.length; i += chunkSize) {
-    const chunk = records.slice(i, i + chunkSize);
-    chunks.push(chunk);
-  }
-  return chunks;
-};
-
-export const getErrorMessage = (error: Error | unknown) => {
-  if (error instanceof Error) return error.message;
-  return String(error);
-};
-
-export const delay = async (ms = 0) => {
-  return await new Promise((resolve) => setTimeout(resolve, ms));
 };

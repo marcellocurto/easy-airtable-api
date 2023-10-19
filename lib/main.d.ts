@@ -1,7 +1,7 @@
 type AirtableRecord = {
     id: string;
     fields: {
-        [key: string]: any;
+        [key: string]: unknown;
     };
 };
 export default class Airtable {
@@ -19,7 +19,9 @@ export default class Airtable {
     updateRecords(records: {
         id: string;
         fields: object;
-    }[]): Promise<AirtableRecord[]>;
+    }[], options?: {
+        typecast?: boolean;
+    }): Promise<AirtableRecord[]>;
     replaceRecord(recordId: string, fields: object): Promise<AirtableRecord>;
     replaceRecords(records: {
         id: string;

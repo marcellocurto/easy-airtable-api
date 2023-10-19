@@ -1,9 +1,9 @@
 import { apiRequest } from './requests';
-import { RequestMethods } from './types';
+import { RequestMethods } from './types/tables';
 
 type AirtableRecord = {
   id: string;
-  fields: { [key: string]: any };
+  fields: { [key: string]: unknown };
 };
 
 export default class Airtable {
@@ -35,7 +35,7 @@ export default class Airtable {
     endpoint: string;
     method: RequestMethods;
     body?: object;
-  }): Promise<any> {
+  }): Promise<unknown> {
     if (!this.apiKey || !this.baseId || !this.tableId) {
       throw new Error(
         'API Key, Base ID, and Table ID/Name must be set before making requests.'
@@ -45,6 +45,7 @@ export default class Airtable {
       url: `${this.apiURL}/${this.baseId}/${this.tableId}${endpoint}`,
       apiKey: this.apiKey,
       method: method,
+      body,
     });
   }
 
@@ -68,7 +69,8 @@ export default class Airtable {
   }
 
   async updateRecords(
-    records: { id: string; fields: object }[]
+    records: { id: string; fields: object }[],
+    options?: { typecast?: boolean }
   ): Promise<AirtableRecord[]> {
     return this.request({ endpoint: '/', method: 'PATCH', body: { records } });
   }

@@ -1,3 +1,67 @@
+export type UpserptRecords = {
+  records: {
+    id: string;
+    createdTime: string;
+    fields: unknown;
+  }[];
+  updatedRecords: string[];
+  createdRecords: string[];
+};
+
+export interface UpdateRecordsBody {
+  typecast: boolean;
+  records: UpdateRecords;
+}
+export interface UpdateRecordsBodyUpsert extends UpdateRecordsBody {
+  performUpsert: { fieldsToMergeOn: FieldsToMergeOn };
+}
+
+export type BaseId = string;
+export type TableId = string;
+
+export type FieldsToMergeOn = string[];
+
+export type ApiRequest = {
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+  url: string;
+  apiKey: string;
+  body?: RequestBody;
+};
+
+export type RequestMethods = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+
+export interface RequestMethodProps {
+  url: string;
+  apiKey: string;
+  body?: RequestBody;
+}
+
+export type RequestBody = unknown;
+
+export interface AirtableRecordRequest {
+  baseId: string;
+  tableId: string;
+  atId?: string;
+  body: RequestBody;
+}
+
+export interface UpdateAirtableRecordRequest {
+  atId?: string;
+  baseId: string;
+  tableId: string;
+  body?: RequestBody;
+}
+
+export interface RequestBodyWebsiteInfos {
+  fields: unknown;
+}
+
+export type UpdateRecord = {
+  fields: unknown;
+};
+
+export type UpdateRecords = UpdateRecord[];
+
 type FieldType = 'singleLineText' | 'checkbox';
 
 type TableFieldOptions = {
