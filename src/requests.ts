@@ -7,10 +7,10 @@ import {
 } from './types/records';
 import { ApiRequest, RequestMethods } from './types/tables';
 
-type AirtableRecord = {
+type AirtableRecord<Fields> = {
   id: string;
   createdTime: string;
-  fields: { [key: string]: unknown };
+  fields: Fields | { [key: string]: unknown };
 };
 
 const apiURL = 'https://api.airtable.com/v0';
@@ -54,7 +54,7 @@ async function airtableRequest<T>({
   });
 }
 
-export async function getRecord({
+export async function getRecord<Fields>({
   apiKey,
   baseId,
   tableId,
@@ -64,8 +64,8 @@ export async function getRecord({
   baseId: string;
   tableId: string;
   recordId: string;
-}): Promise<AirtableRecord> {
-  return airtableRequest<AirtableRecord>({
+}): Promise<AirtableRecord<Fields>> {
+  return airtableRequest<AirtableRecord<Fields>>({
     apiKey,
     baseId,
     tableId,
