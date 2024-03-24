@@ -50,5 +50,35 @@ test('getRecord: wrong baseId', async () => {
   } catch (error) {
     errorMessage = error.message;
   }
-  expect(errorMessage).toBe('Wrong API Key. NOT_FOUND');
+  expect(errorMessage).toBe('NOT_FOUND');
+});
+
+test('getRecord: wrong tableId', async () => {
+  let errorMessage = 'all good';
+  try {
+    await getRecord({
+      apiKey,
+      baseId,
+      tableId: 'tableId',
+      recordId: 'recLztqW64aB9nee1',
+    });
+  } catch (error) {
+    errorMessage = error.message;
+  }
+  expect(errorMessage).toBe('NOT_AUTHORIZED');
+});
+
+test('getRecord: wrong recordId', async () => {
+  let errorMessage = 'all good';
+  try {
+    await getRecord({
+      apiKey,
+      baseId,
+      tableId,
+      recordId: 'wrongId',
+    });
+  } catch (error) {
+    errorMessage = error.message;
+  }
+  expect(errorMessage).toBe('NOT_FOUND');
 });

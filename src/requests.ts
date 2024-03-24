@@ -192,10 +192,12 @@ async function airtableRequest<T>(request: {
 
 function validateResponse<T>(response: ApiResponse<T>) {
   const statusCode = response.statusCode;
+  console.log(response);
+
   if (statusCode === 200) return;
   if (statusCode === 401) throw new Error('Wrong API Key.');
   else if (statusCode === 403) throw new Error('NOT_AUTHORIZED');
-  else if (statusCode === 404) throw new Error('Wrong API Key. NOT_FOUND');
+  else if (statusCode === 404) throw new Error('NOT_FOUND');
   else if (statusCode === 413) throw new Error('Request body is too large');
   else if (statusCode === 422) throw new Error('Operation cannot be processed');
   else if (statusCode === 429) throw new Error('TOO_MANY_REQUESTS');
