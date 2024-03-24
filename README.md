@@ -1,8 +1,12 @@
 # Easy Airtable API
 
-At the moment this is just a shell and not ready to be used. Will add more soon.
+This is meant as an easier/better-to-use alternative to the official Airtable node app.
 
-I don't like using the official Airtable SDK and find myself repeatedly rebuilding the same functionality in different projects. So, it's time to consolidate everything into one package.
+My focus is on delivering a better experience using types and making it easier to get and modify records with some helper functions.
+
+Currently, this project is super early and still needs a lot of work. However, most methods have been implemented to at least get and update records.
+
+More to come soon.
 
 ## Install
 
@@ -14,10 +18,10 @@ npm install easy-airtable-api
 
 ### 0.0.2
 
-- basic request functions to get or update records
-- added type defintions for requests and fields
-- basic tests to check core functionality of library
+- Basic request functions to get or update records.
+- Added type definitions for requests and fields.
+- Basic tests to check the core functionality of the library.
 
 ### 0.0.1
 
-- basic project setup - no real functionality.
+- Basic project setup - no real functionality.
