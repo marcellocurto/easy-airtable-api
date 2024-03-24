@@ -1,4 +1,4 @@
-import { UpdateRecords } from './types';
+import { UpdateRecords } from './types/fields';
 
 export const getArrayInChunks = async (records: UpdateRecords) => {
   const chunks = [];

@@ -1,3 +1,4 @@
+import { GetRecordsQueryParameters, UpdateRecordsRequestOptions } from './types/records';
 type AirtableRecord = {
     id: string;
     fields: {
@@ -8,22 +9,21 @@ export default class Airtable {
     private apiKey;
     private baseId;
     private tableId;
-    private readonly apiURL;
+    private apiURL;
+    url(url: string): this;
     auth(key: string): this;
     base(baseId: string): this;
     table(tableId: string): this;
     private request;
     getRecord(recordId: string): Promise<AirtableRecord>;
-    getRecords(): Promise<AirtableRecord[]>;
+    getRecords(options: GetRecordsQueryParameters): Promise<AirtableRecord[]>;
     updateRecord(recordId: string, fields: object): Promise<AirtableRecord>;
     updateRecords(records: {
         id: string;
         fields: object;
-    }[], options?: {
-        typecast?: boolean;
-    }): Promise<AirtableRecord[]>;
+    }[], options?: UpdateRecordsRequestOptions): Promise<AirtableRecord[]>;
     replaceRecord(recordId: string, fields: object): Promise<AirtableRecord>;
-    replaceRecords(records: {
+    replaceMultipleRecords(records: {
         id: string;
         fields: object;
     }[]): Promise<AirtableRecord[]>;

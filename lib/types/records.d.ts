@@ -8,7 +8,7 @@ interface SortObject {
     field: string;
     direction?: SortDirection;
 }
-interface ListRecordsRequest {
+export interface GetRecordsQueryParameters {
     timeZone?: Timezone;
     userLocale?: string;
     pageSize?: number;
@@ -25,94 +25,99 @@ interface ListRecordsRequest {
 type RecordField = {
     [key: string]: unknown;
 };
-interface AirtableBaseRecord {
+export interface AirtableBaseRecord {
     id: string;
     createdTime: string;
     fields: RecordField;
 }
-interface ListRecordsResponse {
+export interface ListRecordsResponse {
     offset?: string;
     records: AirtableBaseRecord[];
 }
-interface GetRecordQueryParameters {
+export interface GetRecordQueryParameters {
     cellFormat?: CellFormat;
     returnFieldsByFieldId?: boolean;
 }
-interface GetRecordPathParameters {
+export interface GetRecordPathParameters {
     baseId: BaseId;
     tableIdOrName: TableIdOrName;
     recordId: string;
 }
-interface UpdatePathParameters {
+export interface UpdatePathParameters {
     baseId: BaseId;
     tableIdOrName: TableIdOrName;
 }
-interface PerformUpsert {
+export interface PerformUpsert {
     fieldsToMergeOn: string[];
 }
-interface UpdateRecordsRequestBody {
+export interface UpdateRecordsRequestBody {
     performUpsert?: PerformUpsert;
     returnFieldsByFieldId?: boolean;
     typecast?: boolean;
     records: AirtableBaseRecord[];
 }
-interface UpsertResponse {
+export interface UpsertResponse {
     createdRecords: string[];
     updatedRecords: string[];
     records: AirtableBaseRecord[];
 }
-interface UpdateRecordPathParameters {
+export interface UpdateRecordPathParameters {
     baseId: BaseId;
     tableIdOrName: TableIdOrName;
     recordId: string;
 }
-interface UpdateRecordRequestBody {
+export interface UpdateRecordRequestBody {
     typecast?: boolean;
     fields: RecordField;
 }
-interface UpdateRecordResponse {
+export interface UpdateRecordResponse {
     id: string;
     createdTime: string;
     fields: RecordField;
 }
-interface CreateRecordsPathParameters {
+export interface CreateRecordsPathParameters {
     baseId: BaseId;
     tableIdOrName: TableIdOrName;
 }
-interface CreateRecordsRequestBody {
+export interface CreateRecordsRequestBody {
     fields?: RecordField;
     records?: AirtableBaseRecord[];
     returnFieldsByFieldId?: boolean;
     typecast?: boolean;
 }
-interface CreateRecordResponse {
+export type UpdateRecordsRequestOptions = {
+    typecast?: boolean;
+    returnFieldsByFieldId?: boolean;
+};
+export interface CreateRecordResponse {
     id: string;
     createdTime: string;
     fields: RecordField;
 }
-interface CreateRecordsResponse {
+export interface CreateRecordsResponse {
     records: CreateRecordResponse[];
 }
-interface DeleteRecordsPathParameters {
+export interface DeleteRecordsPathParameters {
     baseId: BaseId;
     tableIdOrName: TableIdOrName;
 }
-interface DeleteRecordsQueryParameters {
+export interface DeleteRecordsQueryParameters {
     records: string[];
 }
-interface DeleteRecordResponse {
+export interface DeleteRecordResponse {
     id: string;
     deleted: true;
 }
-interface DeleteRecordsResponse {
+export interface DeleteRecordsResponse {
     records: DeleteRecordResponse[];
 }
-interface DeleteRecordPathParameters {
+export interface DeleteRecordPathParameters {
     baseId: BaseId;
     tableIdOrName: TableIdOrName;
     recordId: string;
 }
-interface SingleDeleteRecordResponse {
+export interface SingleDeleteRecordResponse {
     id: string;
     deleted: true;
 }
+export {};
