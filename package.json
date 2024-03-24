@@ -14,7 +14,7 @@
   "scripts": {
     "watch": "tsc --watch",
     "build": "tsc -p tsconfig.esm.json && tsc -p tsconfig.cjs.json",
-    "publish": "tsc && npm publish",
+    "publish": "npm run build && npm publish",
     "lint": "eslint 'src/**/*.{ts,tsx}'",
     "test": "vitest"
   },
