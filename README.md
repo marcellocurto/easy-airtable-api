@@ -16,6 +16,12 @@ npm install easy-airtable-api
 
 ## Changelog
 
+### 0.0.3
+
+- ESM & CJS builds/
+- Server error handling.
+- Generic field types.
+
 ### 0.0.2
 
 - Basic request functions to get or update records.
