@@ -18,7 +18,7 @@ npm install easy-airtable-api
 
 ### 0.0.3
 
-- ESM & CJS builds/
+- ESM & CJS builds.
 - Server error handling.
 - Generic field types.
 
