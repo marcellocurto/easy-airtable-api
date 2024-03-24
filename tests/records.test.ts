@@ -22,3 +22,33 @@ test('getRecord', async () => {
     },
   });
 });
+
+test('getRecord: wrong apiKey', async () => {
+  let errorMessage = 'all good';
+  try {
+    await getRecord({
+      apiKey: 'wrongKey',
+      baseId,
+      tableId,
+      recordId: 'recLztqW64aB9nee1',
+    });
+  } catch (error) {
+    errorMessage = error.message;
+  }
+  expect(errorMessage).toBe('Wrong API Key.');
+});
+
+test('getRecord: wrong baseId', async () => {
+  let errorMessage = 'all good';
+  try {
+    await getRecord({
+      apiKey,
+      baseId: 'baseId',
+      tableId,
+      recordId: 'recLztqW64aB9nee1',
+    });
+  } catch (error) {
+    errorMessage = error.message;
+  }
+  expect(errorMessage).toBe('Wrong API Key. NOT_FOUND');
+});

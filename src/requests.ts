@@ -2,57 +2,11 @@ import { request, RequestOptions } from 'https';
 import { IncomingMessage } from 'http';
 import { URL } from 'url';
 import {
+  AirtableRecord,
   GetRecordsQueryParameters,
   UpdateRecordsRequestOptions,
 } from './types/records';
 import { ApiRequest, RequestMethods } from './types/tables';
-
-type AirtableRecord<Fields> = {
-  id: string;
-  createdTime: string;
-  fields: Fields | { [key: string]: unknown };
-};
-
-const apiURL = 'https://api.airtable.com/v0';
-
-async function airtableRequest<T>({
-  apiKey,
-  baseId,
-  tableId,
-  endpoint,
-  method,
-  body,
-}: {
-  apiKey: string;
-  baseId: string;
-  tableId: string;
-  endpoint: string;
-  method: RequestMethods;
-  body?: object;
-}): Promise<T> {
-  if (!apiKey) {
-    throw new Error(
-      'API key is not set. Please provide a valid Airtable API key.'
-    );
-  }
-  if (!baseId) {
-    throw new Error(
-      'Base ID is not set. Please provide a valid Airtable base ID.'
-    );
-  }
-  if (!tableId) {
-    throw new Error(
-      'Table ID/Name is not set. Please provide a valid Airtable table ID or name.'
-    );
-  }
-
-  return await apiRequest<T>({
-    url: `${apiURL}/${baseId}/${tableId}${endpoint}`,
-    apiKey,
-    method,
-    body,
-  });
-}
 
 export async function getRecord<Fields>({
   apiKey,
@@ -74,7 +28,7 @@ export async function getRecord<Fields>({
   });
 }
 
-export async function getRecords({
+export async function getRecords<Fields>({
   apiKey,
   baseId,
   tableId,
@@ -84,8 +38,8 @@ export async function getRecords({
   baseId: string;
   tableId: string;
   options: GetRecordsQueryParameters;
-}): Promise<AirtableRecord[]> {
-  return airtableRequest<AirtableRecord[]>({
+}): Promise<AirtableRecord<Fields>[]> {
+  return airtableRequest<AirtableRecord<Fields>[]>({
     apiKey,
     baseId,
     tableId,
@@ -95,7 +49,7 @@ export async function getRecords({
   });
 }
 
-export async function updateRecord({
+export async function updateRecord<Fields>({
   apiKey,
   baseId,
   tableId,
@@ -107,8 +61,8 @@ export async function updateRecord({
   tableId: string;
   recordId: string;
   fields: object;
-}): Promise<AirtableRecord> {
-  return airtableRequest<AirtableRecord>({
+}): Promise<AirtableRecord<Fields>> {
+  return airtableRequest<AirtableRecord<Fields>>({
     apiKey,
     baseId,
     tableId,
@@ -118,7 +72,7 @@ export async function updateRecord({
   });
 }
 
-export async function updateRecords({
+export async function updateRecords<Fields>({
   apiKey,
   baseId,
   tableId,
@@ -130,13 +84,13 @@ export async function updateRecords({
   tableId: string;
   records: { id: string; fields: object }[];
   options?: UpdateRecordsRequestOptions;
-}): Promise<AirtableRecord[]> {
+}): Promise<AirtableRecord<Fields>[]> {
   if (!Array.isArray(records) || records.length === 0) {
     throw new Error(
       'The records array is empty or not provided. Please provide a non-empty array of records to update.'
     );
   }
-  return airtableRequest<AirtableRecord[]>({
+  return airtableRequest<AirtableRecord<Fields>[]>({
     apiKey,
     baseId,
     tableId,
@@ -146,7 +100,7 @@ export async function updateRecords({
   });
 }
 
-export async function replaceRecord({
+export async function replaceRecord<Fields>({
   apiKey,
   baseId,
   tableId,
@@ -158,8 +112,8 @@ export async function replaceRecord({
   tableId: string;
   recordId: string;
   fields: object;
-}): Promise<AirtableRecord> {
-  return airtableRequest<AirtableRecord>({
+}): Promise<AirtableRecord<Fields>> {
+  return airtableRequest<AirtableRecord<Fields>>({
     apiKey,
     baseId,
     tableId,
@@ -169,7 +123,7 @@ export async function replaceRecord({
   });
 }
 
-export async function replaceMultipleRecords({
+export async function replaceMultipleRecords<Fields>({
   apiKey,
   baseId,
   tableId,
@@ -179,13 +133,13 @@ export async function replaceMultipleRecords({
   baseId: string;
   tableId: string;
   records: { id: string; fields: object }[];
-}): Promise<AirtableRecord[]> {
+}): Promise<AirtableRecord<Fields>[]> {
   if (!Array.isArray(records) || records.length === 0) {
     throw new Error(
       'The records array is empty or not provided. Please provide a non-empty array of records to replace.'
     );
   }
-  return airtableRequest<AirtableRecord[]>({
+  return airtableRequest<AirtableRecord<Fields>[]>({
     apiKey,
     baseId,
     tableId,
@@ -195,13 +149,74 @@ export async function replaceMultipleRecords({
   });
 }
 
+async function airtableRequest<T>(request: {
+  apiKey: string;
+  baseId: string;
+  tableId: string;
+  endpoint: string;
+  method: RequestMethods;
+  body?: object;
+  apiURL?: string;
+}): Promise<T> {
+  const { apiKey, baseId, tableId, endpoint, method, body, apiURL } = request;
+
+  const url: string = apiURL || 'https://api.airtable.com/v0';
+
+  if (!apiKey) {
+    throw new Error(
+      'API key is not set. Please provide a valid Airtable API key.'
+    );
+  }
+  if (!baseId) {
+    throw new Error(
+      'Base ID is not set. Please provide a valid Airtable base ID.'
+    );
+  }
+  if (!tableId) {
+    throw new Error(
+      'Table ID/Name is not set. Please provide a valid Airtable table ID or name.'
+    );
+  }
+
+  const response = await apiRequest<T>({
+    url: `${url}/${baseId}/${tableId}${endpoint}`,
+    apiKey,
+    method,
+    body,
+  });
+
+  validateResponse(response);
+
+  return response.data;
+}
+
+function validateResponse<T>(response: ApiResponse<T>) {
+  const statusCode = response.statusCode;
+  if (statusCode === 200) return;
+  if (statusCode === 401) throw new Error('Wrong API Key.');
+  else if (statusCode === 403) throw new Error('NOT_AUTHORIZED');
+  else if (statusCode === 404) throw new Error('Wrong API Key. NOT_FOUND');
+  else if (statusCode === 413) throw new Error('Request body is too large');
+  else if (statusCode === 422) throw new Error('Operation cannot be processed');
+  else if (statusCode === 429) throw new Error('TOO_MANY_REQUESTS');
+  else if (statusCode === 500) throw new Error('SERVER_ERROR');
+  else if (statusCode === 503) throw new Error('SERVICE_UNAVAILABLE');
+  throw new Error('UNEXPECTED_ERROR');
+}
+
+type ApiResponse<T> = {
+  data: T;
+  statusCode?: number;
+  statusMessage?: string;
+};
+
 async function apiRequest<T>({
   url,
   method,
   apiKey,
   body,
-}: ApiRequest): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
+}: ApiRequest): Promise<ApiResponse<T>> {
+  return new Promise<ApiResponse<T>>((resolve, reject) => {
     const parsedUrl = new URL(url);
     const { hostname, pathname, search } = parsedUrl;
 
@@ -225,7 +240,11 @@ async function apiRequest<T>({
 
       res.on('end', () => {
         try {
-          resolve(JSON.parse(data) as T);
+          resolve({
+            data: JSON.parse(data) as T,
+            statusCode: res.statusCode,
+            statusMessage: res.statusMessage,
+          });
         } catch (error) {
           reject(new Error(`Failed to parse response as JSON: ${data}`));
         }
