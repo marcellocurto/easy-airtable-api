@@ -1,33 +1,58 @@
 import { apiRequest } from './requests';
-import { RequestMethods } from './types';
+import {
+  GetRecordsQueryParameters,
+  UpdateRecordsRequestOptions,
+} from './types/records';
+import { RequestMethods } from './types/tables';
 
 type AirtableRecord = {
   id: string;
-  fields: { [key: string]: any };
+  fields: { [key: string]: unknown };
 };
 
 export default class Airtable {
-  private apiKey: string | undefined;
-  private baseId: string | undefined;
-  private tableId: string | undefined;
-  private readonly apiURL: string = 'https://api.airtable.com/v0';
+  private apiKey: string | undefined = undefined;
+  private baseId: string | undefined = undefined;
+  private tableId: string | undefined = undefined;
+  private apiURL: string = 'https://api.airtable.com/v0';
+
+  url(url: string): this {
+    if (typeof url === 'string') {
+      this.apiURL = url;
+    } else {
+      throw new Error('API URL must be a string');
+    }
+    return this;
+  }
 
   auth(key: string): this {
-    this.apiKey = key;
+    if (typeof key === 'string') {
+      this.apiKey = key;
+    } else {
+      throw new Error('API Key must be a string');
+    }
     return this;
   }
 
   base(baseId: string): this {
-    this.baseId = baseId;
+    if (typeof baseId === 'string') {
+      this.baseId = baseId;
+    } else {
+      throw new Error('baseId must be a string');
+    }
     return this;
   }
 
   table(tableId: string): this {
-    this.tableId = tableId;
+    if (typeof tableId === 'string') {
+      this.tableId = tableId;
+    } else {
+      throw new Error('tableId/tableName must be a string');
+    }
     return this;
   }
 
-  private async request({
+  private async request<AirtableRecord>({
     endpoint,
     method,
     body,
@@ -35,25 +60,39 @@ export default class Airtable {
     endpoint: string;
     method: RequestMethods;
     body?: object;
-  }): Promise<any> {
-    if (!this.apiKey || !this.baseId || !this.tableId) {
-      throw new Error(
-        'API Key, Base ID, and Table ID/Name must be set before making requests.'
-      );
+  }): Promise<AirtableRecord> {
+    if (!this.apiKey) {
+      throw new Error('API Key must be set before making requests.');
     }
-    return await apiRequest({
+    if (!this.baseId) {
+      throw new Error('Base ID must be set before making requests.');
+    }
+    if (!this.tableId) {
+      throw new Error('Table ID/Name must be set before making requests.');
+    }
+    return await apiRequest<AirtableRecord>({
       url: `${this.apiURL}/${this.baseId}/${this.tableId}${endpoint}`,
       apiKey: this.apiKey,
       method: method,
+      body,
     });
   }
 
   async getRecord(recordId: string): Promise<AirtableRecord> {
-    return this.request({ endpoint: `/${recordId}`, method: 'GET' });
+    return this.request<AirtableRecord>({
+      endpoint: `/${recordId}`,
+      method: 'GET',
+    });
   }
 
-  async getRecords(): Promise<AirtableRecord[]> {
-    return this.request({ endpoint: '/', method: 'GET' });
+  async getRecords(
+    options: GetRecordsQueryParameters
+  ): Promise<AirtableRecord[]> {
+    return this.request({
+      endpoint: '/listRecords',
+      method: 'POST',
+      body: options,
+    });
   }
 
   async updateRecord(
@@ -68,9 +107,20 @@ export default class Airtable {
   }
 
   async updateRecords(
-    records: { id: string; fields: object }[]
+    records: { id: string; fields: object }[],
+    options?: UpdateRecordsRequestOptions
   ): Promise<AirtableRecord[]> {
-    return this.request({ endpoint: '/', method: 'PATCH', body: { records } });
+    if (!Array.isArray(records)) {
+      throw new Error('records to update must be an array.');
+    }
+    if (records.length === 0) {
+      throw new Error('records to update array must have at least one item.');
+    }
+    return this.request({
+      endpoint: '/',
+      method: 'PATCH',
+      body: { records, ...options },
+    });
   }
 
   async replaceRecord(
@@ -84,7 +134,7 @@ export default class Airtable {
     });
   }
 
-  async replaceRecords(
+  async replaceMultipleRecords(
     records: { id: string; fields: object }[]
   ): Promise<AirtableRecord[]> {
     return this.request({ endpoint: '/', method: 'PUT', body: { records } });

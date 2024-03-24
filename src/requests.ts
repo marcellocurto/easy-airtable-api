@@ -1,26 +1,15 @@
 import { request, RequestOptions } from 'https';
 import { IncomingMessage } from 'http';
 import { URL } from 'url';
-import { getArrayInChunks, delay, getErrorMessage } from './records';
-import {
-  AirtableRecordRequest,
-  ApiRequest,
-  BaseId,
-  FieldsToMergeOn,
-  RequestMethodProps,
-  TableId,
-  UpdateRecords,
-  UpdateRecordsBodyUpsert,
-  UpserptRecords,
-} from './types';
+import { ApiRequest } from './types/tables';
 
-export const apiRequest = async ({
-  method,
+export const apiRequest = async <T>({
   url,
-  body,
+  method,
   apiKey,
-}: ApiRequest): Promise<any> => {
-  return new Promise((resolve, reject) => {
+  body,
+}: ApiRequest): Promise<T> => {
+  return new Promise<T>((resolve, reject) => {
     const parsedUrl = new URL(url);
     const { hostname, pathname, search } = parsedUrl;
 
@@ -44,9 +33,9 @@ export const apiRequest = async ({
 
       res.on('end', () => {
         try {
-          resolve(JSON.parse(data));
+          resolve(JSON.parse(data) as T);
         } catch (error) {
-          reject(new Error(`Failed to parse response: ${data}`));
+          reject(new Error(`Failed to parse response as JSON: ${data}`));
         }
       });
     });
@@ -63,76 +52,4 @@ export const apiRequest = async ({
 
     req.end();
   });
-};
-
-export const patchAirtableRequest = async ({
-  baseId,
-  tableId,
-  body,
-  atId,
-}: AirtableRecordRequest) => {
-  const url = atId
-    ? `https://api.airtable.com/v0/${baseId}/${tableId}/${atId}`
-    : `https://api.airtable.com/v0/${baseId}/${tableId}`;
-  return await patchRequest({ url, body });
-};
-
-export const updateRecordsOnAirtableUpsert = async ({
-  baseId,
-  tableId,
-  records,
-  fieldsToMergeOn,
-}: {
-  baseId: BaseId;
-  tableId: TableId;
-  records: UpdateRecords;
-  fieldsToMergeOn: FieldsToMergeOn;
-}) => {
-  const allUpdatedRecords = [];
-  const chunks = await getArrayInChunks(records);
-  if (!chunks) return null;
-  for (const chunk of chunks) {
-    const body = {
-      performUpsert: { fieldsToMergeOn },
-      typecast: true,
-      records: chunk,
-    };
-    const req = (await updateRecordsOnAirtableRequest({
-      baseId,
-      tableId,
-      body,
-    })) as UpserptRecords;
-    const updatedRecords = req.records;
-    for (const record of updatedRecords) {
-      allUpdatedRecords.push(record.id);
-    }
-    await delay(2000);
-  }
-  return allUpdatedRecords;
-};
-
-const updateRecordsOnAirtableRequest = async ({
-  baseId,
-  tableId,
-  body,
-}: {
-  baseId: BaseId;
-  tableId: TableId;
-  body: UpdateRecordsBodyUpsert;
-}) => {
-  const url = `https://api.airtable.com/v0/${baseId}/${tableId}`;
-  try {
-    return await patchRequest({ url, body });
-  } catch (error) {
-    if (getErrorMessage(error) === 'fetch failed') {
-      try {
-        await delay(20000);
-        return await patchRequest({ url, body });
-      } catch (error) {
-        console.log(`error after fetch failed: ${getErrorMessage(error)}`);
-      }
-    } else {
-      console.log(getErrorMessage(error));
-    }
-  }
 };
