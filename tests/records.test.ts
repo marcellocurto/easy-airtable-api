@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { expect, test } from 'vitest';
-import { getRecord } from '../lib/esm/index';
+import { getRecord } from '../src/index';
 
 const apiKey = process.env.API_KEY as string;
 const baseId = process.env.TEST_BASE_ID as string;
