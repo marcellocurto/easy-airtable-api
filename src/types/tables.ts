@@ -8,11 +8,12 @@ export type UpserptRecords = {
   createdRecords: string[];
 };
 
-export interface UpdateRecordsBody {
+export interface UpdateRecordsBody<Fields> {
   typecast: boolean;
-  records: UpdateRecords;
+  records: UpdateRecords<Fields>;
 }
-export interface UpdateRecordsBodyUpsert extends UpdateRecordsBody {
+export interface UpdateRecordsBodyUpsert<Fields>
+  extends UpdateRecordsBody<Fields> {
   performUpsert: { fieldsToMergeOn: FieldsToMergeOn };
 }
 
@@ -26,7 +27,10 @@ export type ApiRequest = {
   url: string;
   apiKey: string;
   body?: RequestBody;
+  options: AirtableRequestOptions;
 };
+
+export type AirtableRequestOptions = {};
 
 export type RequestMethods = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 
@@ -56,11 +60,11 @@ export interface RequestBodyWebsiteInfos {
   fields: unknown;
 }
 
-export type UpdateRecord = {
-  fields: unknown;
+export type UpdateRecord<Fields> = {
+  fields: Fields;
 };
 
-export type UpdateRecords = UpdateRecord[];
+export type UpdateRecords<Fields> = UpdateRecord<Fields>[];
 
 type FieldType = 'singleLineText' | 'checkbox';
 
@@ -77,12 +81,12 @@ type FieldConfig = {
   options?: TableFieldOptions;
 };
 
-type BaseTableDetails = {
+export type BaseTableDetails = {
   name: string;
   description?: string;
 };
 
-type TableConfig = {
+export type TableConfig = {
   name: string;
   description?: string;
   fields: FieldConfig[];
@@ -97,14 +101,14 @@ type ViewType =
   | 'timeline'
   | 'block';
 
-type View = {
+export type View = {
   id: string;
   name: string;
   type: ViewType;
   visibleFieldIds?: string[];
 };
 
-type TableModel = {
+export type TableModel = {
   id: string;
   primaryFieldId: string;
   name: string;
@@ -113,12 +117,12 @@ type TableModel = {
   views: View[];
 };
 
-type UpdateTableRequestBody = {
+export type UpdateTableRequestBody = {
   name?: string;
   description?: string;
 };
 
-type CreateTableRequestBody = {
+export type CreateTableRequestBody = {
   name: string;
   description?: string;
   fields: FieldConfig[];
