@@ -1,12 +1,19 @@
 {
   "name": "easy-airtable-api",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "An easy way to connect to Airtable via their API.",
-  "main": "./lib/main.js",
-  "types": "./lib/main.d.ts",
+  "main": "lib/cjs/index.js",
+  "module": "lib/esm/index.js",
+  "types": "lib/esm/index.d.ts",
+  "exports": {
+    ".": {
+      "require": "./lib/cjs/index.js",
+      "import": "./lib/esm/index.js"
+    }
+  },
   "scripts": {
     "watch": "tsc --watch",
-    "build": "tsc",
+    "build": "tsc -p tsconfig.esm.json && tsc -p tsconfig.cjs.json",
     "publish": "tsc && npm publish",
     "lint": "eslint 'src/**/*.{ts,tsx}'",
     "test": "vitest"
@@ -18,7 +25,7 @@
     "type": "git",
     "url": "https://github.com/marcellocurto/easy-airtable-api.git"
   },
-  "homepage": "https://github.com/marcellocurto/easy-airtable-api",
+  "homepage": "https://marcellocurto.com/code/easy-airtable-api",
   "author": "Marcello Curto",
   "license": "MIT",
   "prettier": {
