@@ -4,10 +4,10 @@ import { URL } from 'url';
 import { ApiRequest } from './types/tables';
 
 export const apiRequest = async <T>({
-  method,
   url,
-  body,
+  method,
   apiKey,
+  body,
 }: ApiRequest): Promise<T> => {
   return new Promise<T>((resolve, reject) => {
     const parsedUrl = new URL(url);
