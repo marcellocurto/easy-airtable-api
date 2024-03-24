@@ -1,31 +1,84 @@
 import 'dotenv/config';
 import { expect, test } from 'vitest';
+import { getRecord } from '../src/index';
 
-import Airtable from '../lib/main';
+const apiKey = process.env.API_KEY as string;
+const baseId = process.env.TEST_BASE_ID as string;
+const tableId = process.env.TEST_TABLE_NAME_ALL_FIELDS as string;
 
-async function runTests() {
-  const airtable = new Airtable();
+test('getRecord', async () => {
+  const record = await getRecord({
+    apiKey,
+    baseId,
+    tableId,
+    recordId: 'recLztqW64aB9nee1',
+  });
+  expect(record).toEqual({
+    id: 'recLztqW64aB9nee1',
+    createdTime: '2023-09-06T12:46:28.000Z',
+    fields: {
+      Name: 'a',
+      recordId: 'recLztqW64aB9nee1',
+    },
+  });
+});
 
-  const apiKey = process.env.API_KEY;
-  if (!apiKey) throw new Error('API_KEY .env not found');
-  airtable.auth(apiKey);
+test('getRecord: wrong apiKey', async () => {
+  let errorMessage = 'all good';
+  try {
+    await getRecord({
+      apiKey: 'wrongKey',
+      baseId,
+      tableId,
+      recordId: 'recLztqW64aB9nee1',
+    });
+  } catch (error) {
+    errorMessage = error.message;
+  }
+  expect(errorMessage).toBe('Wrong API Key.');
+});
 
-  const baseId = process.env.TEST_BASE_ID;
-  if (!baseId) throw new Error('TEST_BASE_ID .env not found');
-  airtable.base(baseId);
+test('getRecord: wrong baseId', async () => {
+  let errorMessage = 'all good';
+  try {
+    await getRecord({
+      apiKey,
+      baseId: 'baseId',
+      tableId,
+      recordId: 'recLztqW64aB9nee1',
+    });
+  } catch (error) {
+    errorMessage = error.message;
+  }
+  expect(errorMessage).toBe('NOT_FOUND');
+});
 
-  const tableId = process.env.TEST_TABLE_NAME_ALL_FIELDS;
-  if (!tableId) throw new Error('TEST_TABLE_NAME_ALL_FIELDS .env not found');
-  airtable.table(tableId);
+test('getRecord: wrong tableId', async () => {
+  let errorMessage = 'all good';
+  try {
+    await getRecord({
+      apiKey,
+      baseId,
+      tableId: 'tableId',
+      recordId: 'recLztqW64aB9nee1',
+    });
+  } catch (error) {
+    errorMessage = error.message;
+  }
+  expect(errorMessage).toBe('NOT_AUTHORIZED');
+});
 
-  const record = await airtable.getRecord('recLztqW64aB9nee1');
-  console.log(record);
-
-  const records = await airtable.getRecords();
-  console.log(records);
-}
-
-test('/scrape POST test', async () => {
-  await runTests();
-  expect(true).toBe(true);
+test('getRecord: wrong recordId', async () => {
+  let errorMessage = 'all good';
+  try {
+    await getRecord({
+      apiKey,
+      baseId,
+      tableId,
+      recordId: 'wrongId',
+    });
+  } catch (error) {
+    errorMessage = error.message;
+  }
+  expect(errorMessage).toBe('NOT_FOUND');
 });

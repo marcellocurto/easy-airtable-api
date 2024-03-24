@@ -4,7 +4,7 @@
     "module": "commonjs",
     "moduleResolution": "node",
     "declaration": true,
-    "outDir": "./lib",
+    "outDir": "./lib/cjs",
     "strict": true,
     "skipLibCheck": false,
     "esModuleInterop": true,

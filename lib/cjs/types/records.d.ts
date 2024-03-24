@@ -1,3 +1,11 @@
+export type AirtableRecord<Fields = DefaultFieldsType> = {
+    id: string;
+    createdTime: string;
+    fields: Fields;
+};
+type DefaultFieldsType = {
+    [key: string]: unknown;
+};
 type BaseId = string;
 type TableIdOrName = string;
 type Timezone = string;

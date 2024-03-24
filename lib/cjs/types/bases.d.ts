@@ -3,7 +3,7 @@ type BaseList = {
     name: string;
     permissionLevel: 'none' | 'read' | 'comment' | 'edit' | 'create';
 };
-type ListBasesResponse = {
+export type ListBasesResponse = {
     bases: BaseList[];
     offset?: string;
 };
@@ -33,7 +33,7 @@ type Table = {
     primaryFieldId: string;
     views: TableView[];
 };
-type GetBaseSchemaResponse = {
+export type GetBaseSchemaResponse = {
     tables: Table[];
 };
 type TableConfigFieldOptions = {
@@ -51,12 +51,13 @@ type BasesTableConfig = {
     fields: TableConfigField[];
     name: string;
 };
-type CreateBaseRequestBody = {
+export type CreateBaseRequestBody = {
     name: string;
     tables: BasesTableConfig[];
     workspaceId: string;
 };
-type CreateBaseResponse = {
+export type CreateBaseResponse = {
     id: string;
     tables: Table[];
 };
+export {};
