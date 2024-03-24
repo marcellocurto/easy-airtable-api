@@ -23,14 +23,11 @@ export type TableId = string;
 export type FieldsToMergeOn = string[];
 
 export type ApiRequest = {
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
   url: string;
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
   apiKey: string;
   body?: RequestBody;
-  options: AirtableRequestOptions;
 };
-
-export type AirtableRequestOptions = {};
 
 export type RequestMethods = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 

@@ -11,7 +11,7 @@ interface SortObject {
   direction?: SortDirection;
 }
 
-export interface ListRecordsRequest {
+export interface GetRecordsQueryParameters {
   timeZone?: Timezone;
   userLocale?: string;
   pageSize?: number;
@@ -102,6 +102,11 @@ export interface CreateRecordsRequestBody {
   returnFieldsByFieldId?: boolean;
   typecast?: boolean;
 }
+
+export type UpdateRecordsRequestOptions = {
+  typecast?: boolean;
+  returnFieldsByFieldId?: boolean;
+};
 
 export interface CreateRecordResponse {
   id: string;
