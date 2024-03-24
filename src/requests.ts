@@ -1,15 +1,15 @@
 import { request, RequestOptions } from 'https';
 import { IncomingMessage } from 'http';
 import { URL } from 'url';
-import { ApiRequest } from './types';
+import { ApiRequest } from './types/tables';
 
-export const apiRequest = async ({
+export const apiRequest = async <T>({
   method,
   url,
   body,
   apiKey,
-}: ApiRequest): Promise<unknown> => {
-  return new Promise((resolve, reject) => {
+}: ApiRequest): Promise<T> => {
+  return new Promise<T>((resolve, reject) => {
     const parsedUrl = new URL(url);
     const { hostname, pathname, search } = parsedUrl;
 
@@ -33,9 +33,9 @@ export const apiRequest = async ({
 
       res.on('end', () => {
         try {
-          resolve(JSON.parse(data));
+          resolve(JSON.parse(data) as T);
         } catch (error) {
-          reject(new Error(`Failed to parse response: ${data}`));
+          reject(new Error(`Failed to parse response as JSON: ${data}`));
         }
       });
     });
