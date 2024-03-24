@@ -1,13 +1,13 @@
 type AIState = 'empty' | 'loading' | 'generated' | 'error';
 
-interface AICell {
+export interface AICell {
   state: AIState;
   isStale: boolean;
   value: string | null;
   errorType?: string;
 }
 
-interface AIFieldTypeAndOptions {
+export interface AIFieldTypeAndOptions {
   type: 'aiText';
   options: {
     prompt?: (
@@ -22,47 +22,47 @@ interface AIFieldTypeAndOptions {
   };
 }
 
-interface AttachmentWrite {
+export interface AttachmentWrite {
   url: string;
   filename?: string;
   id?: string;
 }
 
-interface AttachmentFieldTypeAndOptions {
+export interface AttachmentFieldTypeAndOptions {
   type: 'multipleAttachments';
   options: {
     isReversed: boolean;
   };
 }
 
-type AutoNumberCell = number;
+export type AutoNumberCell = number;
 
-interface AutoNumberFieldTypeAndOptions {
+export interface AutoNumberFieldTypeAndOptions {
   type: 'autoNumber';
 }
 
-interface BarcodeCell {
+export interface BarcodeCell {
   type?: string;
   text: string;
 }
 
-interface BarcodeFieldTypeAndOptions {
+export interface BarcodeFieldTypeAndOptions {
   type: 'barcode';
 }
 
-interface ButtonCell {
+export interface ButtonCell {
   label: string;
   url: string | null;
 }
 
-interface ButtonFieldTypeAndOptions {
+export interface ButtonFieldTypeAndOptions {
   type: 'button';
 }
 
-type CheckboxCellV1 = true | 'empty';
-type CheckboxCellV2 = true | null;
+export type CheckboxCellV1 = true | 'empty';
+export type CheckboxCellV2 = true | null;
 
-interface CheckboxFieldTypeAndOptions {
+export interface CheckboxFieldTypeAndOptions {
   type: 'checkbox';
   options: {
     color:
@@ -87,21 +87,21 @@ interface CheckboxFieldTypeAndOptions {
   };
 }
 
-interface CollaboratorCell {
+export interface CollaboratorCell {
   id: string;
   email?: string;
   name?: string;
   profilePicUrl?: string;
 }
 
-interface SingleCollaboratorFieldTypeAndOptions {
+export interface SingleCollaboratorFieldTypeAndOptions {
   type: 'singleCollaborator';
   options: {};
 }
 
-type CountCell = number;
+export type CountCell = number;
 
-interface CountFieldTypeAndOptions {
+export interface CountFieldTypeAndOptions {
   type: 'count';
   options: {
     isValid: boolean;
@@ -109,24 +109,24 @@ interface CountFieldTypeAndOptions {
   };
 }
 
-type CreatedByCell = CollaboratorCell;
+export type CreatedByCell = CollaboratorCell;
 
-interface CreatedByFieldTypeAndOptions {
+export interface CreatedByFieldTypeAndOptions {
   type: 'createdBy';
 }
 
-type CreatedTimeCell = string;
+export type CreatedTimeCell = string;
 
-interface CreatedTimeFieldTypeAndOptions {
+export interface CreatedTimeFieldTypeAndOptions {
   type: 'createdTime';
   options: {
     result?: any;
   };
 }
 
-type CurrencyCell = number;
+export type CurrencyCell = number;
 
-interface CurrencyFieldTypeAndOptions {
+export interface CurrencyFieldTypeAndOptions {
   type: 'currency';
   options: {
     precision: number;
@@ -134,28 +134,28 @@ interface CurrencyFieldTypeAndOptions {
   };
 }
 
-type DateCell = string;
+export type DateCell = string;
 
-interface DateFormatOptions {
+export interface DateFormatOptions {
   format: 'l' | 'LL' | 'M/D/YYYY' | 'D/M/YYYY' | 'YYYY-MM-DD';
   name: 'local' | 'friendly' | 'us' | 'european' | 'iso';
 }
 
-interface DateFieldTypeAndOptions {
+export interface DateFieldTypeAndOptions {
   type: 'date';
   options: {
     dateFormat: DateFormatOptions;
   };
 }
 
-type DateTimeCell = string;
+export type DateTimeCell = string;
 
-interface TimeFormatOptions {
+export interface TimeFormatOptions {
   format: 'h:mma' | 'HH:mm' | undefined;
   name: '12hour' | '24hour';
 }
 
-interface DateTimeFieldTypeAndOptions {
+export interface DateTimeFieldTypeAndOptions {
   type: 'dateTime';
   options: {
     timeZone: string;
@@ -164,9 +164,9 @@ interface DateTimeFieldTypeAndOptions {
   };
 }
 
-type DurationCell = number;
+export type DurationCell = number;
 
-interface DurationFieldTypeAndOptions {
+export interface DurationFieldTypeAndOptions {
   type: 'duration';
   options: {
     durationFormat:
@@ -178,15 +178,15 @@ interface DurationFieldTypeAndOptions {
   };
 }
 
-type EmailCell = string;
+export type EmailCell = string;
 
-interface EmailFieldTypeAndOptions {
+export interface EmailFieldTypeAndOptions {
   type: 'email';
 }
 
-type FormulaCell = string | number;
+export type FormulaCell = string | number;
 
-interface FormulaFieldTypeAndOptions {
+export interface FormulaFieldTypeAndOptions {
   type: 'formula';
   options: {
     formula: string;
@@ -196,20 +196,20 @@ interface FormulaFieldTypeAndOptions {
   };
 }
 
-type LastModifiedByCell = {
+export type LastModifiedByCell = {
   id: string;
   email?: string;
   name?: string;
   profilePicUrl?: string;
 };
 
-interface LastModifiedByFieldTypeAndOptions {
+export interface LastModifiedByFieldTypeAndOptions {
   type: 'lastModifiedBy';
 }
 
-type LastModifiedTimeCell = string;
+export type LastModifiedTimeCell = string;
 
-interface LastModifiedTimeFieldTypeAndOptions {
+export interface LastModifiedTimeFieldTypeAndOptions {
   type: 'lastModifiedTime';
   options: {
     isValid: boolean;
@@ -218,10 +218,10 @@ interface LastModifiedTimeFieldTypeAndOptions {
   };
 }
 
-type LinkToAnotherRecordCellV1 = string[];
-type LinkToAnotherRecordCellV2 = { id: string; name: string }[];
+export type LinkToAnotherRecordCellV1 = string[];
+export type LinkToAnotherRecordCellV2 = { id: string; name: string }[];
 
-interface LinkToAnotherRecordFieldTypeAndOptions {
+export interface LinkToAnotherRecordFieldTypeAndOptions {
   type: 'multipleRecordLinks';
   options: {
     isReversed: boolean;
@@ -232,19 +232,19 @@ interface LinkToAnotherRecordFieldTypeAndOptions {
   };
 }
 
-type LongTextCell = string;
+export type LongTextCell = string;
 
-interface LongTextFieldTypeAndOptions {
+export interface LongTextFieldTypeAndOptions {
   type: 'multilineText';
 }
 
-type LookupCellV1 = (number | string | boolean | any)[];
-type LookupCellV2 = {
+export type LookupCellV1 = (number | string | boolean | any)[];
+export type LookupCellV2 = {
   valuesByLinkedRecordId: { [key: string]: any[] };
   linkedRecordIds: string[];
 };
 
-interface LookupFieldTypeAndOptions {
+export interface LookupFieldTypeAndOptions {
   type: 'lookup';
   options: {
     fieldIdInLinkedTable: string | null;
@@ -254,16 +254,16 @@ interface LookupFieldTypeAndOptions {
   };
 }
 
-type Collaborator = {
+export type Collaborator = {
   id: string;
   email?: string;
   name?: string;
   profilePicUrl?: string;
 };
 
-type Collaborators = Collaborator[];
+export type Collaborators = Collaborator[];
 
-type ChoiceColor =
+export type ChoiceColor =
   | 'blueLight2'
   | 'cyanLight2'
   | 'tealLight2'
@@ -305,17 +305,17 @@ type ChoiceColor =
   | 'purpleDark1'
   | 'grayDark1';
 
-type Choice = {
+export type Choice = {
   id: string;
   color?: ChoiceColor;
   name: string;
 };
 
-type SelectOptions = {
+export type SelectOptions = {
   choices: Choice[];
 };
 
-type RatingColor =
+export type RatingColor =
   | 'yellowBright'
   | 'orangeBright'
   | 'redBright'
@@ -326,15 +326,15 @@ type RatingColor =
   | 'tealBright'
   | 'greenBright'
   | 'grayBright';
-type RatingIcon = 'star' | 'heart' | 'thumbsUp' | 'flag' | 'dot';
+export type RatingIcon = 'star' | 'heart' | 'thumbsUp' | 'flag' | 'dot';
 
-type RatingOptions = {
+export type RatingOptions = {
   color: RatingColor;
   icon: RatingIcon;
   max: number;
 };
 
-type RollupOptions = {
+export type RollupOptions = {
   fieldIdInLinkedTable?: string;
   recordLinkFieldId?: string;
   result?: any;
@@ -342,13 +342,13 @@ type RollupOptions = {
   referencedFieldIds?: string[];
 };
 
-type ExternalSyncChoice = {
+export type ExternalSyncChoice = {
   id: string;
   color?: ChoiceColor;
   name: string;
 };
 
-type ExternalSyncOptions = {
+export type ExternalSyncOptions = {
   choices: ExternalSyncChoice[];
 };
 
