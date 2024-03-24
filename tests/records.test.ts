@@ -1,11 +1,11 @@
-import { config } from 'dotenv';
-config();
+import 'dotenv/config';
 import { expect, test } from 'vitest';
 
 import Airtable from '../lib/main';
 
 async function runTests() {
   const airtable = new Airtable();
+
   const apiKey = process.env.API_KEY;
   if (!apiKey) throw new Error('API_KEY .env not found');
   airtable.auth(apiKey);
