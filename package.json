@@ -2,8 +2,8 @@
   "name": "easy-airtable-api",
   "version": "0.0.2",
   "description": "An easy way to connect to Airtable via their API.",
-  "main": "./lib/index.js",
-  "types": "./lib/index.d.ts",
+  "main": "./lib/main.js",
+  "types": "./lib/main.d.ts",
   "scripts": {
     "watch": "tsc --watch",
     "build": "tsc",
