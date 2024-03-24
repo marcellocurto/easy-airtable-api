@@ -1,17 +1,17 @@
 import { GetRecordsQueryParameters, UpdateRecordsRequestOptions } from './types/records';
-type AirtableRecord = {
+type AirtableRecord<Fields> = {
     id: string;
     createdTime: string;
-    fields: {
+    fields: Fields | {
         [key: string]: unknown;
     };
 };
-export declare function getRecord({ apiKey, baseId, tableId, recordId, }: {
+export declare function getRecord<Fields>({ apiKey, baseId, tableId, recordId, }: {
     apiKey: string;
     baseId: string;
     tableId: string;
     recordId: string;
-}): Promise<AirtableRecord>;
+}): Promise<AirtableRecord<Fields>>;
 export declare function getRecords({ apiKey, baseId, tableId, options, }: {
     apiKey: string;
     baseId: string;
