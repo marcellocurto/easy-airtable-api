@@ -7,6 +7,7 @@ import { RequestMethods } from './types/tables';
 
 type AirtableRecord = {
   id: string;
+  createdTime: string;
   fields: { [key: string]: unknown };
 };
 
@@ -29,7 +30,7 @@ export default class Airtable {
     if (typeof key === 'string') {
       this.apiKey = key;
     } else {
-      throw new Error('API Key must be a string');
+      throw new Error('Airtable API Key must be a string');
     }
     return this;
   }
@@ -38,7 +39,7 @@ export default class Airtable {
     if (typeof baseId === 'string') {
       this.baseId = baseId;
     } else {
-      throw new Error('baseId must be a string');
+      throw new Error('Airtable baseId must be a string');
     }
     return this;
   }
@@ -47,7 +48,7 @@ export default class Airtable {
     if (typeof tableId === 'string') {
       this.tableId = tableId;
     } else {
-      throw new Error('tableId/tableName must be a string');
+      throw new Error('Airtable tableId/tableName must be a string');
     }
     return this;
   }
@@ -62,13 +63,15 @@ export default class Airtable {
     body?: object;
   }): Promise<AirtableRecord> {
     if (!this.apiKey) {
-      throw new Error('API Key must be set before making requests.');
+      throw new Error('Airtable API Key must be set before making requests.');
     }
     if (!this.baseId) {
-      throw new Error('Base ID must be set before making requests.');
+      throw new Error('Airtable Base ID must be set before making requests.');
     }
     if (!this.tableId) {
-      throw new Error('Table ID/Name must be set before making requests.');
+      throw new Error(
+        'Airtable Table ID/Name must be set before making requests.'
+      );
     }
     return await apiRequest<AirtableRecord>({
       url: `${this.apiURL}/${this.baseId}/${this.tableId}${endpoint}`,
