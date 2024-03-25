@@ -123,7 +123,7 @@ export async function replaceRecord<Fields>({
   });
 }
 
-export async function replaceMultipleRecords<Fields>({
+export async function replaceRecords<Fields>({
   apiKey,
   baseId,
   tableId,

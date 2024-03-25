@@ -1,1 +1,8 @@
-export { getRecord } from './requests';
+export {
+  getRecord,
+  getRecords,
+  updateRecord,
+  updateRecords,
+  replaceRecord,
+  replaceRecords,
+} from './requests';

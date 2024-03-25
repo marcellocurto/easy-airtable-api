@@ -35,7 +35,7 @@ export declare function replaceRecord<Fields>({ apiKey, baseId, tableId, recordI
     recordId: string;
     fields: object;
 }): Promise<AirtableRecord<Fields>>;
-export declare function replaceMultipleRecords<Fields>({ apiKey, baseId, tableId, records, }: {
+export declare function replaceRecords<Fields>({ apiKey, baseId, tableId, records, }: {
     apiKey: string;
     baseId: string;
     tableId: string;
