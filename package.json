@@ -8,7 +8,8 @@
   "exports": {
     ".": {
       "require": "./lib/cjs/index.js",
-      "import": "./lib/esm/index.js"
+      "import": "./lib/esm/index.js",
+      "types": "./lib/types/index.d.ts"
     }
   },
   "scripts": {
