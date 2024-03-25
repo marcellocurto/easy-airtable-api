@@ -18,7 +18,8 @@ npm install easy-airtable-api
 
 ### 0.0.4
 
-
+- Export all available methods
+- Restucture lib folder to not have duplicate types.
 
 ### 0.0.3
 
