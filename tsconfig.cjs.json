@@ -5,6 +5,7 @@
     "moduleResolution": "node",
     "declaration": true,
     "outDir": "./lib/cjs",
+    "declarationDir": "./lib/types",
     "strict": true,
     "skipLibCheck": false,
     "esModuleInterop": true,
@@ -16,6 +17,7 @@
     "src/**/*.ts"
   ],
   "exclude": [
+    "lib",
     "node_modules"
   ]
 }

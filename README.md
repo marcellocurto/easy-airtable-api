@@ -16,6 +16,10 @@ npm install easy-airtable-api
 
 ## Changelog
 
+### 0.0.4
+
+
+
 ### 0.0.3
 
 - ESM & CJS builds.
