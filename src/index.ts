@@ -5,4 +5,4 @@ export {
   updateRecords,
   replaceRecord,
   replaceRecords,
-} from './requests';
+} from './requests.js';
