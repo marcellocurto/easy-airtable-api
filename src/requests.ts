@@ -37,9 +37,9 @@ export async function getRecords<Fields>({
   apiKey: string;
   baseId: string;
   tableId: string;
-  options: GetRecordsQueryParameters;
+  options?: GetRecordsQueryParameters;
 }): Promise<AirtableRecord<Fields>[]> {
-  return airtableRequest<AirtableRecord<Fields>[]>({
+  const response = airtableRequest<AirtableRecord<Fields>[]>({
     apiKey,
     baseId,
     tableId,
@@ -47,6 +47,7 @@ export async function getRecords<Fields>({
     method: 'POST',
     body: options,
   });
+  return response;
 }
 
 export async function updateRecord<Fields>({
