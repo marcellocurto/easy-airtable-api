@@ -12,7 +12,5 @@ test('getRecords', async () => {
     baseId,
     tableId,
   });
-  console.log(records);
-
   expect(records.length > 0).toBe(true);
 });
