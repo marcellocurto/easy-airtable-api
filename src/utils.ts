@@ -1,6 +1,6 @@
 import { UpdateRecords } from './types/fields';
 
-export const getArrayInChunks = async (records: UpdateRecords) => {
+export async function getArrayInChunks(records: UpdateRecords) {
   const chunks = [];
   const chunkSize = 10;
   for (let i = 0; i < records.length; i += chunkSize) {
@@ -8,13 +8,13 @@ export const getArrayInChunks = async (records: UpdateRecords) => {
     chunks.push(chunk);
   }
   return chunks;
-};
+}
 
-export const getErrorMessage = (error: Error | unknown) => {
+export function getErrorMessage(error: Error | unknown) {
   if (error instanceof Error) return error.message;
   return String(error);
-};
+}
 
-export const delay = async (ms = 0) => {
+export async function delay(ms = 0) {
   return await new Promise((resolve) => setTimeout(resolve, ms));
-};
+}
