@@ -19,7 +19,6 @@ npm install easy-airtable-api
 ### 0.0.5
 
 - Drop CJS build and only support ESM for now.
-- Helper to get all records and not just 100 max.
 
 ### 0.0.4
 
