@@ -9,7 +9,7 @@ export declare function getRecords<Fields>({ apiKey, baseId, tableId, options, }
     apiKey: string;
     baseId: string;
     tableId: string;
-    options: GetRecordsQueryParameters;
+    options?: GetRecordsQueryParameters;
 }): Promise<AirtableRecord<Fields>[]>;
 export declare function updateRecord<Fields>({ apiKey, baseId, tableId, recordId, fields, }: {
     apiKey: string;
