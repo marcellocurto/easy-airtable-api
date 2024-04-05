@@ -16,9 +16,13 @@ npm install easy-airtable-api
 
 ## Changelog
 
+### 0.0.5
+
+- Drop CJS build and only support ESM for now.
+
 ### 0.0.4
 
-- Export all available methods
+- Export all available methods.
 - Restucture lib folder to not have duplicate types.
 
 ### 0.0.3

@@ -1,11 +1,10 @@
 {
   "compilerOptions": {
-    "target": "es6",
     "module": "ESNext",
+    "target": "ESNext",
     "moduleResolution": "node",
     "declaration": true,
-    "outDir": "./lib/esm",
-    "declarationDir": "./lib/types",
+    "outDir": "./lib",
     "strict": true,
     "skipLibCheck": false,
     "esModuleInterop": true,

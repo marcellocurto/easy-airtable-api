@@ -50,7 +50,7 @@ test('getRecord: wrong baseId', async () => {
   } catch (error) {
     errorMessage = error.message;
   }
-  expect(errorMessage).toBe('NOT_FOUND');
+  expect(errorMessage).toBe('Table or Record not found.');
 });
 
 test('getRecord: wrong tableId', async () => {
@@ -65,7 +65,7 @@ test('getRecord: wrong tableId', async () => {
   } catch (error) {
     errorMessage = error.message;
   }
-  expect(errorMessage).toBe('NOT_AUTHORIZED');
+  expect(errorMessage).toBe('Not authorized.');
 });
 
 test('getRecord: wrong recordId', async () => {
@@ -80,5 +80,5 @@ test('getRecord: wrong recordId', async () => {
   } catch (error) {
     errorMessage = error.message;
   }
-  expect(errorMessage).toBe('NOT_FOUND');
+  expect(errorMessage).toBe('Table or Record not found.');
 });

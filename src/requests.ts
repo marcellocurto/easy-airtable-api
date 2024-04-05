@@ -19,7 +19,7 @@ export async function getRecord<Fields>({
   tableId: string;
   recordId: string;
 }): Promise<AirtableRecord<Fields>> {
-  return airtableRequest<AirtableRecord<Fields>>({
+  return await airtableRequest<AirtableRecord<Fields>>({
     apiKey,
     baseId,
     tableId,
@@ -37,16 +37,19 @@ export async function getRecords<Fields>({
   apiKey: string;
   baseId: string;
   tableId: string;
-  options: GetRecordsQueryParameters;
+  options?: GetRecordsQueryParameters;
 }): Promise<AirtableRecord<Fields>[]> {
-  return airtableRequest<AirtableRecord<Fields>[]>({
-    apiKey,
-    baseId,
-    tableId,
-    endpoint: '/listRecords',
-    method: 'POST',
-    body: options,
-  });
+  const response = await airtableRequest<{ records: AirtableRecord<Fields>[] }>(
+    {
+      apiKey,
+      baseId,
+      tableId,
+      endpoint: '/listRecords',
+      method: 'POST',
+      body: options,
+    }
+  );
+  return response.records;
 }
 
 export async function updateRecord<Fields>({
@@ -62,7 +65,7 @@ export async function updateRecord<Fields>({
   recordId: string;
   fields: object;
 }): Promise<AirtableRecord<Fields>> {
-  return airtableRequest<AirtableRecord<Fields>>({
+  return await airtableRequest<AirtableRecord<Fields>>({
     apiKey,
     baseId,
     tableId,
@@ -90,7 +93,7 @@ export async function updateRecords<Fields>({
       'The records array is empty or not provided. Please provide a non-empty array of records to update.'
     );
   }
-  return airtableRequest<AirtableRecord<Fields>[]>({
+  return await airtableRequest<AirtableRecord<Fields>[]>({
     apiKey,
     baseId,
     tableId,
@@ -113,7 +116,7 @@ export async function replaceRecord<Fields>({
   recordId: string;
   fields: object;
 }): Promise<AirtableRecord<Fields>> {
-  return airtableRequest<AirtableRecord<Fields>>({
+  return await airtableRequest<AirtableRecord<Fields>>({
     apiKey,
     baseId,
     tableId,
@@ -139,7 +142,7 @@ export async function replaceRecords<Fields>({
       'The records array is empty or not provided. Please provide a non-empty array of records to replace.'
     );
   }
-  return airtableRequest<AirtableRecord<Fields>[]>({
+  return await airtableRequest<AirtableRecord<Fields>[]>({
     apiKey,
     baseId,
     tableId,
@@ -192,18 +195,17 @@ async function airtableRequest<T>(request: {
 
 function validateResponse<T>(response: ApiResponse<T>) {
   const statusCode = response.statusCode;
-  console.log(response);
-
   if (statusCode === 200) return;
   if (statusCode === 401) throw new Error('Wrong API Key.');
-  else if (statusCode === 403) throw new Error('NOT_AUTHORIZED');
-  else if (statusCode === 404) throw new Error('NOT_FOUND');
+  else if (statusCode === 403) throw new Error('Not authorized.');
+  else if (statusCode === 404) throw new Error('Table or Record not found.');
   else if (statusCode === 413) throw new Error('Request body is too large');
   else if (statusCode === 422) throw new Error('Operation cannot be processed');
-  else if (statusCode === 429) throw new Error('TOO_MANY_REQUESTS');
-  else if (statusCode === 500) throw new Error('SERVER_ERROR');
-  else if (statusCode === 503) throw new Error('SERVICE_UNAVAILABLE');
-  throw new Error('UNEXPECTED_ERROR');
+  else if (statusCode === 429)
+    throw new Error('Too many request to Airtable server.');
+  else if (statusCode === 500) throw new Error('Airtable Server Error');
+  else if (statusCode === 503) throw new Error('Airtable Service Unabailanle');
+  throw new Error('Unexpected error.');
 }
 
 type ApiResponse<T> = {
