@@ -4,7 +4,7 @@
   "type": "module",
   "description": "An easy way to connect to Airtable via their API.",
   "main": "lib/index.js",
-  "types": "lib/types/index.d.ts",
+  "types": "lib/index.d.ts",
   "exports": {
     ".": {
       "import": "./lib/index.js"

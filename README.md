@@ -16,6 +16,10 @@ npm install easy-airtable-api
 
 ## Changelog
 
+### 0.0.6
+
+- Fix path to index.d.ts.
+
 ### 0.0.5
 
 - Drop CJS build and only support ESM for now.
