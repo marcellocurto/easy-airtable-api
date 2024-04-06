@@ -1,10 +1,10 @@
 {
   "name": "easy-airtable-api",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "type": "module",
   "description": "An easy way to connect to Airtable via their API.",
   "main": "lib/index.js",
-  "types": "lib/types/index.d.ts",
+  "types": "lib/index.d.ts",
   "exports": {
     ".": {
       "import": "./lib/index.js"
