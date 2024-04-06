@@ -58,20 +58,31 @@ export async function updateRecord<Fields>({
   tableId,
   recordId,
   fields,
+  options,
 }: {
   apiKey: string;
   baseId: string;
   tableId: string;
   recordId: string;
   fields: object;
+  options?: {
+    typecast?: boolean;
+    returnFieldsByFieldId?: boolean;
+    overwriteFieldsNotSpecified?: boolean;
+  };
 }): Promise<AirtableRecord<Fields>> {
   return await airtableRequest<AirtableRecord<Fields>>({
     apiKey,
     baseId,
     tableId,
     endpoint: `/${recordId}`,
-    method: 'PATCH',
-    body: { fields },
+    method: options?.overwriteFieldsNotSpecified === true ? 'PUT' : 'PATCH',
+    body: {
+      fields,
+      typecast: options?.typecast === true ? true : false,
+      returnFieldsByFieldId:
+        options?.returnFieldsByFieldId === true ? true : false,
+    },
   });
 }
 
