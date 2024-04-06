@@ -11,12 +11,17 @@ export declare function getRecords<Fields>({ apiKey, baseId, tableId, options, }
     tableId: string;
     options?: GetRecordsQueryParameters;
 }): Promise<AirtableRecord<Fields>[]>;
-export declare function updateRecord<Fields>({ apiKey, baseId, tableId, recordId, fields, }: {
+export declare function updateRecord<Fields>({ apiKey, baseId, tableId, recordId, fields, options, }: {
     apiKey: string;
     baseId: string;
     tableId: string;
     recordId: string;
     fields: object;
+    options?: {
+        typecast?: boolean;
+        returnFieldsByFieldId?: boolean;
+        overwriteFieldsNotSpecified?: boolean;
+    };
 }): Promise<AirtableRecord<Fields>>;
 export declare function updateRecords<Fields>({ apiKey, baseId, tableId, records, options, }: {
     apiKey: string;
