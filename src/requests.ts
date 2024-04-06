@@ -200,10 +200,11 @@ function validateResponse<T>(response: ApiResponse<T>) {
   else if (statusCode === 403) throw new Error('Not authorized.');
   else if (statusCode === 404) throw new Error('Table or Record not found.');
   else if (statusCode === 413) throw new Error('Request body is too large');
-  else if (statusCode === 422) throw new Error('Operation cannot be processed');
-  else if (statusCode === 429)
+  else if (statusCode === 422) {
+    throw new Error('Operation cannot be processed. Do the field names match?');
+  } else if (statusCode === 429) {
     throw new Error('Too many request to Airtable server.');
-  else if (statusCode === 500) throw new Error('Airtable Server Error');
+  } else if (statusCode === 500) throw new Error('Airtable Server Error');
   else if (statusCode === 503) throw new Error('Airtable Service Unabailanle');
   throw new Error('Unexpected error.');
 }
