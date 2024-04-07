@@ -11,6 +11,13 @@ test('getRecords', async () => {
     apiKey,
     baseId,
     tableId,
+    options: {
+      cellFormat: 'string',
+      timeZone: 'Africa/Abidjan',
+      userLocale: 'ru',
+    },
   });
+  console.log(records);
+
   expect(records.length > 0).toBe(true);
 });
