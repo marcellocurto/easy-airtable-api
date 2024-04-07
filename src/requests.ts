@@ -39,6 +39,7 @@ export async function getRecords<Fields>({
   tableId: string;
   options?: GetRecordsQueryParameters;
 }): Promise<AirtableRecord<Fields>[]> {
+  validateGetRecordsOptions(options);
   const response = await airtableRequest<{ records: AirtableRecord<Fields>[] }>(
     {
       apiKey,
@@ -50,6 +51,17 @@ export async function getRecords<Fields>({
     }
   );
   return response.records;
+}
+
+function validateGetRecordsOptions(options?: GetRecordsQueryParameters) {
+  if (!options) return;
+  if (options.cellFormat === 'string') {
+    if (!options.timeZone || !options.userLocale) {
+      throw new Error(
+        'The timeZone and userLocale parameters are required when using string as the cellFormat.'
+      );
+    }
+  }
 }
 
 export async function updateRecord<Fields>({
