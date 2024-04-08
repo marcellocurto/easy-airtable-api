@@ -16,6 +16,11 @@ npm install easy-airtable-api
 
 ## Changelog
 
+### 0.0.7
+
+- Add all available updateRecords options.
+- getRecords function gets all records automatically.
+
 ### 0.0.6
 
 - Add all available updateRecord options.

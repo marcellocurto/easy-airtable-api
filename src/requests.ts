@@ -39,17 +39,43 @@ export async function getRecords<Fields>({
   tableId: string;
   options?: GetRecordsQueryParameters;
 }): Promise<AirtableRecord<Fields>[]> {
-  const response = await airtableRequest<{ records: AirtableRecord<Fields>[] }>(
-    {
+  validateGetRecordsOptions(options);
+  let records: AirtableRecord<Fields>[] = [];
+  let currentOffset: string | undefined;
+  do {
+    const requestBody = currentOffset
+      ? { ...options, offset: currentOffset }
+      : options;
+    const response = await airtableRequest<{
+      records: AirtableRecord<Fields>[];
+      offset?: string;
+    }>({
       apiKey,
       baseId,
       tableId,
       endpoint: '/listRecords',
       method: 'POST',
-      body: options,
+      body: requestBody,
+    });
+    records = records.concat(response.records);
+    currentOffset = response.offset;
+  } while (currentOffset);
+
+  return records;
+}
+
+function validateGetRecordsOptions(options?: GetRecordsQueryParameters) {
+  if (!options) return;
+  if (options.cellFormat === 'string') {
+    if (!options.timeZone || !options.userLocale) {
+      throw new Error(
+        'The timeZone and userLocale parameters are required when using string as the cellFormat.'
+      );
     }
-  );
-  return response.records;
+  }
+  if (!options.maxRecords) {
+    options.maxRecords = 100;
+  }
 }
 
 export async function updateRecord<Fields>({
@@ -207,16 +233,16 @@ async function airtableRequest<T>(request: {
 function validateResponse<T>(response: ApiResponse<T>) {
   const statusCode = response.statusCode;
   if (statusCode === 200) return;
-  if (statusCode === 401) throw new Error('Wrong API Key.');
+  if (statusCode === 401) throw new Error('Incorrect API Key.');
   else if (statusCode === 403) throw new Error('Not authorized.');
-  else if (statusCode === 404) throw new Error('Table or Record not found.');
-  else if (statusCode === 413) throw new Error('Request body is too large');
+  else if (statusCode === 404) throw new Error('Table or record not found.');
+  else if (statusCode === 413) throw new Error('Request body is too large.');
   else if (statusCode === 422) {
     throw new Error('Operation cannot be processed. Do the field names match?');
   } else if (statusCode === 429) {
-    throw new Error('Too many request to Airtable server.');
-  } else if (statusCode === 500) throw new Error('Airtable Server Error');
-  else if (statusCode === 503) throw new Error('Airtable Service Unabailanle');
+    throw new Error('Too many requests to the Airtable server.');
+  } else if (statusCode === 500) throw new Error('Airtable server error.');
+  else if (statusCode === 503) throw new Error('Airtable service unavailable.');
   throw new Error('Unexpected error.');
 }
 
