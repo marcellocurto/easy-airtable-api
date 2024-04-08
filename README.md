@@ -6,21 +6,57 @@ My focus is on delivering a better experience using types and making it easier t
 
 Currently, this project is super early and still needs a lot of work. However, most methods have been implemented to at least get and update records.
 
-More to come soon.
-
 ## Install
 
-```
+```bash
 npm install easy-airtable-api
 ```
 
-or
-
-```
+```bash
 bun add easy-airtable-api
 ```
 
+## How to
+
+### Get Single Record
+
+```ts
+type Fields = {
+  Name?: string;
+  Notes?: string;
+  Status?: string;
+};
+
+const records = await getRecord<Fields>({
+  apiKey: 'apiKey',
+  baseId: 'baseId',
+  tableId: 'tableId',
+  recordId: 'recordId',
+});
+```
+
+### Get Multiple Records
+
+```ts
+type Fields = {
+  Name?: string;
+  Notes?: string;
+  Status?: string;
+};
+
+const records = await getRecords<Fields>({
+  apiKey: 'apiKey',
+  baseId: 'baseId',
+  tableId: 'tableId',
+  options: {
+    maxRecords: 500,
+  },
+});
+```
+
 ## Changelog
+
+### 0.0.8
 
 ### 0.0.7
 
