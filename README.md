@@ -14,6 +14,12 @@ More to come soon.
 npm install easy-airtable-api
 ```
 
+or
+
+```
+bun add easy-airtable-api
+```
+
 ## Changelog
 
 ### 0.0.7
