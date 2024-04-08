@@ -21,6 +21,8 @@ bun add easy-airtable-api
 ### Get a Single Record
 
 ```ts
+import { getRecord } from "easy-airtable-api";
+
 type Fields = {
   Name?: string;
   Notes?: string;
@@ -38,6 +40,8 @@ const record = await getRecord<Fields>({
 ### Get Multiple Records
 
 ```ts
+import { getRecords } from "easy-airtable-api";
+
 type Fields = {
   Name?: string;
   Notes?: string;
