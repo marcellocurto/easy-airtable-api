@@ -110,11 +110,6 @@ export interface CreateRecordsRequestBody {
   typecast?: boolean;
 }
 
-export type UpdateRecordsRequestOptions = {
-  typecast?: boolean;
-  returnFieldsByFieldId?: boolean;
-};
-
 export interface CreateRecordResponse {
   id: string;
   createdTime: string;
