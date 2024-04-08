@@ -3,6 +3,5 @@ export {
   getRecords,
   updateRecord,
   updateRecords,
-  replaceRecord,
-  replaceRecords,
+  updateRecordsUpsert,
 } from './requests.js';

@@ -4,7 +4,7 @@ export type AirtableRecord<Fields = DefaultFieldsType> = {
     fields: Fields;
 };
 type DefaultFieldsType = {
-    [key: string]: unknown;
+    [key: string]: any;
 };
 type BaseId = string;
 type TableIdOrName = string;
@@ -92,10 +92,6 @@ export interface CreateRecordsRequestBody {
     returnFieldsByFieldId?: boolean;
     typecast?: boolean;
 }
-export type UpdateRecordsRequestOptions = {
-    typecast?: boolean;
-    returnFieldsByFieldId?: boolean;
-};
 export interface CreateRecordResponse {
     id: string;
     createdTime: string;

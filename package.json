@@ -16,7 +16,8 @@
     "publish": "npm publish",
     "lint": "eslint 'src/**/*.{ts,tsx}'",
     "test": "vitest",
-    "testGetRecords": "vitest get-records.test.ts"
+    "testGetRecords": "vitest get-records.test.ts",
+    "testUpdateRecords": "vitest update-records.test.ts"
   },
   "keywords": [
     "airtable"

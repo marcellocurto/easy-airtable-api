@@ -1,4 +1,4 @@
-import { AirtableRecord, GetRecordsQueryParameters, UpdateRecordsRequestOptions } from './types/records';
+import { AirtableRecord, GetRecordsQueryParameters } from './types/records';
 export declare function getRecord<Fields>({ apiKey, baseId, tableId, recordId, }: {
     apiKey: string;
     baseId: string;
@@ -16,7 +16,7 @@ export declare function updateRecord<Fields>({ apiKey, baseId, tableId, recordId
     baseId: string;
     tableId: string;
     recordId: string;
-    fields: object;
+    fields: Fields;
     options?: {
         typecast?: boolean;
         returnFieldsByFieldId?: boolean;
@@ -29,23 +29,32 @@ export declare function updateRecords<Fields>({ apiKey, baseId, tableId, records
     tableId: string;
     records: {
         id: string;
-        fields: object;
+        fields: Fields;
     }[];
-    options?: UpdateRecordsRequestOptions;
-}): Promise<AirtableRecord<Fields>[]>;
-export declare function replaceRecord<Fields>({ apiKey, baseId, tableId, recordId, fields, }: {
-    apiKey: string;
-    baseId: string;
-    tableId: string;
-    recordId: string;
-    fields: object;
-}): Promise<AirtableRecord<Fields>>;
-export declare function replaceRecords<Fields>({ apiKey, baseId, tableId, records, }: {
+    options?: {
+        typecast?: boolean;
+        returnFieldsByFieldId?: boolean;
+        overwriteFieldsNotSpecified?: boolean;
+    };
+}): Promise<{
+    records: AirtableRecord<Fields>[];
+}>;
+export declare function updateRecordsUpsert<Fields>({ apiKey, baseId, tableId, records, options, }: {
     apiKey: string;
     baseId: string;
     tableId: string;
     records: {
-        id: string;
-        fields: object;
+        id?: string;
+        fields: Fields;
     }[];
-}): Promise<AirtableRecord<Fields>[]>;
+    options?: {
+        fieldsToMergeOn: string[];
+        typecast?: boolean;
+        returnFieldsByFieldId?: boolean;
+        overwriteFieldsNotSpecified?: boolean;
+    };
+}): Promise<{
+    createdRecords: string[];
+    updatedRecords: string[];
+    records: AirtableRecord<Fields>[];
+}>;

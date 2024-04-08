@@ -1,52 +1,99 @@
 # Easy Airtable API
 
-This is meant as an easier/better-to-use alternative to the official Airtable node app.
+This is intended as a more accessible and user-friendly alternative to the official Airtable Node.js library.
 
-My focus is on delivering a better experience using types and making it easier to get and modify records with some helper functions.
+My focus has been on delivering an enhanced experience by utilizing types and simplifying the process of retrieving and modifying records through some helpful functions.
 
-Currently, this project is super early and still needs a lot of work. However, most methods have been implemented to at least get and update records.
-
-More to come soon.
+Currently, this project is in its early stages and requires significant development. Nonetheless, most methods to retrieve and update records have already been implemented.
 
 ## Install
 
-```
+```bash
 npm install easy-airtable-api
+```
+
+```bash
+bun add easy-airtable-api
+```
+
+## How to Use
+
+### Get a Single Record
+
+```ts
+type Fields = {
+  Name?: string;
+  Notes?: string;
+  Status?: string;
+};
+
+const record = await getRecord<Fields>({
+  apiKey: 'apiKey',
+  baseId: 'baseId',
+  tableId: 'tableId',
+  recordId: 'recordId',
+});
+```
+
+### Get Multiple Records
+
+```ts
+type Fields = {
+  Name?: string;
+  Notes?: string;
+  Status?: string;
+};
+
+const records = await getRecords<Fields>({
+  apiKey: 'apiKey',
+  baseId: 'baseId',
+  tableId: 'tableId',
+  options: {
+    maxRecords: 500,
+  },
+});
 ```
 
 ## Changelog
 
+### 0.0.8
+
+- Implemented the updateRecords method.
+- Implemented the updateRecordsUpsert method.
+- Added a delay when executing many requests in succession.
+- Fixed the updateRecord and updateRecords methods to return correct field types.
+
 ### 0.0.7
 
-- Add all available updateRecords options.
-- getRecords function gets all records automatically.
+- Added all available options for updateRecords.
+- Modified the getRecords function to automatically retrieve all records.
 
 ### 0.0.6
 
-- Add all available updateRecord options.
-- Fix path to index.d.ts.
+- Added all available options for updateRecord.
+- Corrected the path to index.d.ts.
 
 ### 0.0.5
 
-- Drop CJS build and only support ESM for now.
+- Discontinued CJS build, supporting only ESM for now.
 
 ### 0.0.4
 
-- Export all available methods.
-- Restucture lib folder to not have duplicate types.
+- Exported all available methods.
+- Restructured the lib folder to eliminate duplicate types.
 
 ### 0.0.3
 
-- ESM & CJS builds.
-- Server error handling.
-- Generic field types.
+- Supported both ESM & CJS builds.
+- Enhanced server error handling.
+- Introduced generic field types.
 
 ### 0.0.2
 
-- Basic request functions to get or update records.
+- Developed basic request functions to retrieve or update records.
 - Added type definitions for requests and fields.
-- Basic tests to check the core functionality of the library.
+- Conducted basic tests to verify the core functionality of the library.
 
 ### 0.0.1
 
-- Basic project setup - no real functionality.
+- Initial project setup with no real functionality implemented.
