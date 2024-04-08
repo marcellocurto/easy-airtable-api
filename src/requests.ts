@@ -40,17 +40,28 @@ export async function getRecords<Fields>({
   options?: GetRecordsQueryParameters;
 }): Promise<AirtableRecord<Fields>[]> {
   validateGetRecordsOptions(options);
-  const response = await airtableRequest<{ records: AirtableRecord<Fields>[] }>(
-    {
+  let records: AirtableRecord<Fields>[] = [];
+  let currentOffset: string | undefined;
+  do {
+    const requestBody = currentOffset
+      ? { ...options, offset: currentOffset }
+      : options;
+    const response = await airtableRequest<{
+      records: AirtableRecord<Fields>[];
+      offset?: string;
+    }>({
       apiKey,
       baseId,
       tableId,
       endpoint: '/listRecords',
       method: 'POST',
-      body: options,
-    }
-  );
-  return response.records;
+      body: requestBody,
+    });
+    records = records.concat(response.records);
+    currentOffset = response.offset;
+  } while (currentOffset);
+
+  return records;
 }
 
 function validateGetRecordsOptions(options?: GetRecordsQueryParameters) {
@@ -61,6 +72,9 @@ function validateGetRecordsOptions(options?: GetRecordsQueryParameters) {
         'The timeZone and userLocale parameters are required when using string as the cellFormat.'
       );
     }
+  }
+  if (!options.maxRecords) {
+    options.maxRecords = 100;
   }
 }
 
@@ -231,7 +245,6 @@ function validateResponse<T>(response: ApiResponse<T>) {
   else if (statusCode === 503) throw new Error('Airtable service unavailable.');
   throw new Error('Unexpected error.');
 }
-
 
 type ApiResponse<T> = {
   data: T;
