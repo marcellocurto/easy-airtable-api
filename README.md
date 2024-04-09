@@ -30,10 +30,10 @@ type Fields = {
 };
 
 const record = await getRecord<Fields>({
-  apiKey: 'apiKey',
-  baseId: 'baseId',
-  tableId: 'tableId',
-  recordId: 'recordId',
+  apiKey: "apiKey",
+  baseId: "baseId",
+  tableId: "tableId",
+  recordId: "recordId",
 });
 ```
 
@@ -49,9 +49,9 @@ type Fields = {
 };
 
 const records = await getRecords<Fields>({
-  apiKey: 'apiKey',
-  baseId: 'baseId',
-  tableId: 'tableId',
+  apiKey: "apiKey",
+  baseId: "baseId",
+  tableId: "tableId",
   options: {
     maxRecords: 500,
   },
@@ -59,6 +59,10 @@ const records = await getRecords<Fields>({
 ```
 
 ## Changelog
+
+### 0.0.10
+
+- Fixed deleteRecords implementation errors.
 
 ### 0.0.9
 

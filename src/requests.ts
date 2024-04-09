@@ -260,7 +260,7 @@ export async function deleteRecords({
   apiKey: string;
   baseId: string;
   tableId: string;
-  recordIds: DeleteRecordsQueryParameters;
+  recordIds: string[];
 }): Promise<DeleteRecordsResponse> {
   if (!Array.isArray(recordIds) || recordIds.length === 0) {
     throw new Error(
@@ -277,15 +277,13 @@ export async function deleteRecords({
   let combinedResults: DeleteRecordResponse[] = [];
 
   for (const chunk of chunks) {
+    const query = chunk.map((id) => `records[]=${id}`).join('&');
     const result = await airtableRequest<DeleteRecordsResponse>({
       apiKey,
       baseId,
       tableId,
-      endpoint: '/',
+      endpoint: `?${query}`,
       method: 'DELETE',
-      body: {
-        records: chunk,
-      },
     });
 
     combinedResults = combinedResults.concat(result.records);
