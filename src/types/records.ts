@@ -144,10 +144,6 @@ export interface DeleteRecordPathParameters {
   recordId: string;
 }
 
-export interface SingleDeleteRecordResponse {
-  id: string;
-  deleted: true;
-}
 export type Timezones =
   | 'Africa/Abidjan'
   | 'Africa/Accra'
