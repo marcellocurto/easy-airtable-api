@@ -62,6 +62,8 @@ const records = await getRecords<Fields>({
 
 ### 0.0.9
 
+- Implemented the deleteRecords method.
+
 ### 0.0.8
 
 - Implemented the updateRecords method.

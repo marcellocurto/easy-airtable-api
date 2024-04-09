@@ -1,7 +1,13 @@
 import { request, RequestOptions } from 'https';
 import { IncomingMessage } from 'http';
 import { URL } from 'url';
-import { AirtableRecord, GetRecordsQueryParameters } from './types/records';
+import {
+  AirtableRecord,
+  DeleteRecordResponse,
+  DeleteRecordsQueryParameters,
+  DeleteRecordsResponse,
+  GetRecordsQueryParameters,
+} from './types/records';
 import { ApiRequest, RequestMethods } from './types/tables';
 import { delay } from './utils';
 
@@ -243,6 +249,50 @@ export async function updateRecordsUpsert<Fields>({
     updatedRecords: allUpdatedRecords,
     records: allRecords,
   };
+}
+
+export async function deleteRecords({
+  apiKey,
+  baseId,
+  tableId,
+  recordIds,
+}: {
+  apiKey: string;
+  baseId: string;
+  tableId: string;
+  recordIds: DeleteRecordsQueryParameters;
+}): Promise<DeleteRecordsResponse> {
+  if (!Array.isArray(recordIds) || recordIds.length === 0) {
+    throw new Error(
+      'The record ids array is empty or not provided. Please provide a non-empty array of record ids to delete the records.'
+    );
+  }
+
+  const chunkSize = 10;
+  const chunks = [];
+  for (let i = 0; i < recordIds.length; i += chunkSize) {
+    chunks.push(recordIds.slice(i, i + chunkSize));
+  }
+
+  let combinedResults: DeleteRecordResponse[] = [];
+
+  for (const chunk of chunks) {
+    const result = await airtableRequest<DeleteRecordsResponse>({
+      apiKey,
+      baseId,
+      tableId,
+      endpoint: '/',
+      method: 'DELETE',
+      body: {
+        records: chunk,
+      },
+    });
+
+    combinedResults = combinedResults.concat(result.records);
+    await delay(500);
+  }
+
+  return { records: combinedResults };
 }
 
 async function airtableRequest<T>(request: {

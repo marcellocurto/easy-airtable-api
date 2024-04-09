@@ -4,4 +4,5 @@ export {
   updateRecord,
   updateRecords,
   updateRecordsUpsert,
+  deleteRecords
 } from './requests.js';
