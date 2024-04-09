@@ -1,4 +1,4 @@
-import { AirtableRecord, DeleteRecordsQueryParameters, DeleteRecordsResponse, GetRecordsQueryParameters } from './types/records';
+import { AirtableRecord, DeleteRecordsResponse, GetRecordsQueryParameters } from './types/records';
 export declare function getRecord<Fields>({ apiKey, baseId, tableId, recordId, }: {
     apiKey: string;
     baseId: string;
@@ -62,5 +62,5 @@ export declare function deleteRecords({ apiKey, baseId, tableId, recordIds, }: {
     apiKey: string;
     baseId: string;
     tableId: string;
-    recordIds: DeleteRecordsQueryParameters;
+    recordIds: string[];
 }): Promise<DeleteRecordsResponse>;
