@@ -9,7 +9,7 @@ import {
   GetRecordsQueryParameters,
 } from './types/records';
 import { ApiRequest, RequestMethods } from './types/tables';
-import { delay } from './utils';
+import { delay } from './utils.js';
 
 export async function getRecord<Fields>({
   apiKey,
