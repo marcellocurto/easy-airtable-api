@@ -60,6 +60,11 @@ const records = await getRecords<Fields>({
 
 ## Changelog
 
+### 0.0.11
+
+- Make apiKey, baseId, tableId default to undefined #12
+- Missing .js in utils import #13
+
 ### 0.0.10
 
 - Fixed deleteRecords implementation errors.
