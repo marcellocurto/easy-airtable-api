@@ -17,9 +17,9 @@ export async function getRecord<Fields>({
   tableId,
   recordId,
 }: {
-  apiKey: string;
-  baseId: string;
-  tableId: string;
+  apiKey?: string;
+  baseId?: string;
+  tableId?: string;
   recordId: string;
 }): Promise<AirtableRecord<Fields>> {
   return await airtableRequest<AirtableRecord<Fields>>({
@@ -37,9 +37,9 @@ export async function getRecords<Fields>({
   tableId,
   options,
 }: {
-  apiKey: string;
-  baseId: string;
-  tableId: string;
+  apiKey?: string;
+  baseId?: string;
+  tableId?: string;
   options?: GetRecordsQueryParameters;
 }): Promise<AirtableRecord<Fields>[]> {
   validateGetRecordsOptions(options);
@@ -90,9 +90,9 @@ export async function updateRecord<Fields>({
   fields,
   options,
 }: {
-  apiKey: string;
-  baseId: string;
-  tableId: string;
+  apiKey?: string;
+  baseId?: string;
+  tableId?: string;
   recordId: string;
   fields: Fields;
   options?: {
@@ -123,9 +123,9 @@ export async function updateRecords<Fields>({
   records,
   options,
 }: {
-  apiKey: string;
-  baseId: string;
-  tableId: string;
+  apiKey?: string;
+  baseId?: string;
+  tableId?: string;
   records: { id: string; fields: Fields }[];
   options?: {
     typecast?: boolean;
@@ -181,9 +181,9 @@ export async function updateRecordsUpsert<Fields>({
   records,
   options,
 }: {
-  apiKey: string;
-  baseId: string;
-  tableId: string;
+  apiKey?: string;
+  baseId?: string;
+  tableId?: string;
   records: { id?: string; fields: Fields }[];
   options?: {
     fieldsToMergeOn: string[];
@@ -257,9 +257,9 @@ export async function deleteRecords({
   tableId,
   recordIds,
 }: {
-  apiKey: string;
-  baseId: string;
-  tableId: string;
+  apiKey?: string;
+  baseId?: string;
+  tableId?: string;
   recordIds: string[];
 }): Promise<DeleteRecordsResponse> {
   if (!Array.isArray(recordIds) || recordIds.length === 0) {
@@ -294,9 +294,9 @@ export async function deleteRecords({
 }
 
 async function airtableRequest<T>(request: {
-  apiKey: string;
-  baseId: string;
-  tableId: string;
+  apiKey?: string;
+  baseId?: string;
+  tableId?: string;
   endpoint: string;
   method: RequestMethods;
   body?: object;
