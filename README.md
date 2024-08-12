@@ -60,6 +60,11 @@ const records = await getRecords<Fields>({
 
 ## Changelog
 
+### 0.0.12
+
+- Reverted making apiKey, baseId, tableId default to undefined
+- Added option to customize delay between requests via options.requestInterval
+
 ### 0.0.11
 
 - Make apiKey, baseId, tableId default to undefined #12

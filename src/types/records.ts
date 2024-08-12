@@ -31,6 +31,7 @@ export interface GetRecordsQueryParameters {
   fields?: string[];
   returnFieldsByFieldId?: boolean;
   recordMetadata?: RecordMetadataOptions[];
+  requestInterval?: number;
 }
 
 type RecordField = {
