@@ -17,9 +17,9 @@ export async function getRecord<Fields>({
   tableId,
   recordId,
 }: {
-  apiKey?: string;
-  baseId?: string;
-  tableId?: string;
+  apiKey: string;
+  baseId: string;
+  tableId: string;
   recordId: string;
 }): Promise<AirtableRecord<Fields>> {
   return await airtableRequest<AirtableRecord<Fields>>({
@@ -37,9 +37,9 @@ export async function getRecords<Fields>({
   tableId,
   options,
 }: {
-  apiKey?: string;
-  baseId?: string;
-  tableId?: string;
+  apiKey: string;
+  baseId: string;
+  tableId: string;
   options?: GetRecordsQueryParameters;
 }): Promise<AirtableRecord<Fields>[]> {
   validateGetRecordsOptions(options);
@@ -62,7 +62,7 @@ export async function getRecords<Fields>({
     });
     records = records.concat(response.records);
     currentOffset = response.offset;
-    if (currentOffset) await delay(500);
+    if (currentOffset) await delay(options?.requestInterval ?? 500);
   } while (currentOffset);
 
   return records;
@@ -90,9 +90,9 @@ export async function updateRecord<Fields>({
   fields,
   options,
 }: {
-  apiKey?: string;
-  baseId?: string;
-  tableId?: string;
+  apiKey: string;
+  baseId: string;
+  tableId: string;
   recordId: string;
   fields: Fields;
   options?: {
@@ -123,14 +123,15 @@ export async function updateRecords<Fields>({
   records,
   options,
 }: {
-  apiKey?: string;
-  baseId?: string;
-  tableId?: string;
+  apiKey: string;
+  baseId: string;
+  tableId: string;
   records: { id: string; fields: Fields }[];
   options?: {
     typecast?: boolean;
     returnFieldsByFieldId?: boolean;
     overwriteFieldsNotSpecified?: boolean;
+    requestInterval?: number;
   };
 }): Promise<{
   records: AirtableRecord<Fields>[];
@@ -168,7 +169,7 @@ export async function updateRecords<Fields>({
     });
 
     combinedResults = combinedResults.concat(result.records);
-    await delay(500);
+    await delay(options?.requestInterval ?? 500);
   }
 
   return { records: combinedResults };
@@ -181,15 +182,16 @@ export async function updateRecordsUpsert<Fields>({
   records,
   options,
 }: {
-  apiKey?: string;
-  baseId?: string;
-  tableId?: string;
+  apiKey: string;
+  baseId: string;
+  tableId: string;
   records: { id?: string; fields: Fields }[];
   options?: {
     fieldsToMergeOn: string[];
     typecast?: boolean;
     returnFieldsByFieldId?: boolean;
     overwriteFieldsNotSpecified?: boolean;
+    requestInterval?: number;
   };
 }): Promise<{
   createdRecords: string[];
@@ -241,7 +243,7 @@ export async function updateRecordsUpsert<Fields>({
     allCreatedRecords = allCreatedRecords.concat(result.createdRecords);
     allUpdatedRecords = allUpdatedRecords.concat(result.updatedRecords);
     allRecords = allRecords.concat(result.records);
-    await delay(500);
+    await delay(options?.requestInterval ?? 500);
   }
 
   return {
@@ -256,11 +258,13 @@ export async function deleteRecords({
   baseId,
   tableId,
   recordIds,
+  options,
 }: {
-  apiKey?: string;
-  baseId?: string;
-  tableId?: string;
+  apiKey: string;
+  baseId: string;
+  tableId: string;
   recordIds: string[];
+  options?: { requestInterval?: number };
 }): Promise<DeleteRecordsResponse> {
   if (!Array.isArray(recordIds) || recordIds.length === 0) {
     throw new Error(
@@ -287,16 +291,16 @@ export async function deleteRecords({
     });
 
     combinedResults = combinedResults.concat(result.records);
-    await delay(500);
+    await delay(options?.requestInterval ?? 500);
   }
 
   return { records: combinedResults };
 }
 
 async function airtableRequest<T>(request: {
-  apiKey?: string;
-  baseId?: string;
-  tableId?: string;
+  apiKey: string;
+  baseId: string;
+  tableId: string;
   endpoint: string;
   method: RequestMethods;
   body?: object;
