@@ -2,9 +2,9 @@
 
 This is intended as a more accessible and user-friendly alternative to the official Airtable Node.js library.
 
-My focus has been on delivering an enhanced experience by utilizing types and simplifying the process of retrieving and modifying records through some helpful functions.
+Our focus has been on delivering an enhanced experience by utilizing types and simplifying the process of retrieving and modifying records through some helpful functions.
 
-Currently, this project is in its early stages and requires significant development. Nonetheless, most methods to retrieve and update records have already been implemented.
+Currently, this project is in its early stages and requires significant development. Nonetheless, most methods for retrieving and updating records have already been implemented.
 
 ## Install
 
@@ -59,6 +59,10 @@ const records = await getRecords<Fields>({
 ```
 
 ## Changelog
+
+### 0.0.13
+
+- Added generateTypeScriptDefinitions function to generate TypeScript definitions for Airtable tables.
 
 ### 0.0.12
 
