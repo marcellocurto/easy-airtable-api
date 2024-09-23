@@ -60,6 +60,10 @@ const records = await getRecords<Fields>({
 
 ## Changelog
 
+### 0.0.14
+
+- Exported generateTypeScriptDefinitions function.
+
 ### 0.0.13
 
 - Added generateTypeScriptDefinitions function to generate TypeScript definitions for Airtable tables.
