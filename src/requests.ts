@@ -440,12 +440,15 @@ export async function getBaseSchema({
   apiKey: string;
   baseId: string;
 }): Promise<AirtableBaseSchema> {
-  const response = await fetch(`https://api.airtable.com/v0/meta/bases/${baseId}/tables`, {
-    method: 'GET',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-    },
-  });
+  const response = await fetch(
+    `https://api.airtable.com/v0/meta/bases/${baseId}/tables`,
+    {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+    }
+  );
 
   if (!response.ok) {
     throw new Error(`Error fetching base schema: ${response.statusText}`);
@@ -476,7 +479,7 @@ export async function generateTypeScriptDefinitions({
   let typeDefinitions = `type ${table.name}Fields = {\n`;
 
   table.fields.forEach((field) => {
-    typeDefinitions += `  ${field.name}?: ${mapAirtableTypeToTypeScript(
+    typeDefinitions += `  "${field.name}"?: ${mapAirtableTypeToTypeScript(
       field.type
     )};\n`;
   });
