@@ -38,15 +38,38 @@ export async function airtableRequest<T>(request: {
     method,
     body,
   });
-
   validateResponse(response);
 
   return response.data;
 }
 
+interface AirtableErrorResponse {
+  error: {
+    type: string;
+    message: string;
+  };
+}
+
 function validateResponse<T>(response: ApiResponse<T>) {
   const statusCode = response.statusCode;
   if (statusCode === 200) return;
+
+  const isAirtableError = (data: any): data is AirtableErrorResponse => {
+    return (
+      data &&
+      typeof data === 'object' &&
+      'error' in data &&
+      typeof data.error === 'object' &&
+      data.error !== null &&
+      'message' in data.error &&
+      typeof data.error.message === 'string'
+    );
+  };
+
+  if (response.data && isAirtableError(response.data)) {
+    throw new Error(response.data.error.message);
+  }
+
   if (statusCode === 401) throw new Error('Incorrect API Key.');
   else if (statusCode === 403) throw new Error('Not authorized.');
   else if (statusCode === 404) throw new Error('Table or record not found.');

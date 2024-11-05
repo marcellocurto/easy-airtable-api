@@ -1,6 +1,8 @@
 export {
   getRecord,
   getRecords,
+  createRecord,
+  createRecords,
   updateRecord,
   updateRecords,
   updateRecordsUpsert,

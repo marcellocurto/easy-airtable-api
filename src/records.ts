@@ -58,7 +58,10 @@ export async function getRecords<Fields>({
     });
     records = records.concat(response.records);
     currentOffset = response.offset;
-    if (currentOffset) await delay(options?.requestInterval ?? 500);
+    if (currentOffset && (options?.maxRecords ?? 100) > 100) {
+      const interval: number = options?.requestInterval || 500;
+      await delay(interval);
+    }
   } while (currentOffset);
 
   return records;
@@ -165,7 +168,13 @@ export async function updateRecords<Fields>({
     });
 
     combinedResults = combinedResults.concat(result.records);
-    await delay(options?.requestInterval ?? 500);
+    if (
+      records.length > chunkSize &&
+      chunks.indexOf(chunk) < chunks.length - 1
+    ) {
+      const interval: number = options?.requestInterval || 500;
+      await delay(interval);
+    }
   }
 
   return { records: combinedResults };
@@ -239,7 +248,10 @@ export async function updateRecordsUpsert<Fields>({
     allCreatedRecords = allCreatedRecords.concat(result.createdRecords);
     allUpdatedRecords = allUpdatedRecords.concat(result.updatedRecords);
     allRecords = allRecords.concat(result.records);
-    await delay(options?.requestInterval ?? 500);
+    if (records.length > chunkSize && chunks.indexOf(chunk) < chunks.length - 1) {
+      const interval: number = options?.requestInterval || 500;
+      await delay(interval);
+    }
   }
 
   return {
@@ -287,7 +299,10 @@ export async function deleteRecords({
     });
 
     combinedResults = combinedResults.concat(result.records);
-    await delay(options?.requestInterval ?? 500);
+    if (recordIds.length > chunkSize && chunks.indexOf(chunk) < chunks.length - 1) {
+      const interval: number = options?.requestInterval || 500;
+      await delay(interval);
+    }
   }
 
   return { records: combinedResults };
@@ -372,9 +387,14 @@ export async function createRecords<Fields>({
       },
     });
     combinedResults = combinedResults.concat(result.records);
+    if (
+      records.length > chunkSize &&
+      chunks.indexOf(chunk) < chunks.length - 1
+    ) {
+      const interval: number = options?.requestInterval || 500;
+      await delay(interval);
+    }
   }
 
-  return {
-    records: combinedResults,
-  };
+  return { records: combinedResults };
 }
