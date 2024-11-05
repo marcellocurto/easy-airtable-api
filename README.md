@@ -141,6 +141,7 @@ const types = await generateTypeScriptDefinitions({
 
 - Type generation wraps type keys in quotations
 - Fix various type generation issues
+- added createRecords and createRecord methods
 
 ### 0.0.14
 
