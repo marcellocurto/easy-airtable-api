@@ -1,10 +1,12 @@
 # Easy Airtable API
 
-This is intended as a more accessible and user-friendly alternative to the official Airtable Node.js library.
+I created this as a simpler alternative to the official Airtable Node.js library.
 
-Our focus has been on delivering an enhanced experience by utilizing types and simplifying the process of retrieving and modifying records through some helpful functions.
+This library makes it easier to work with Airtable by providing TypeScript support and straightforward functions for reading and writing records.
 
-Currently, this project is in its early stages and requires significant development. Nonetheless, most methods for retrieving and updating records have already been implemented.
+While this is still an early project and needs more work, you can already use it to fetch and update records in your Airtable bases.
+
+It also supports generating TypeScript definitions for your Airtable tables which is super useful.
 
 ## Install
 
