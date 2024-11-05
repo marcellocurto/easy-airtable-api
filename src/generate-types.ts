@@ -54,8 +54,19 @@ function mapAirtableTypeToTypeScript(airtableType: string): {
   readonly: boolean;
 } {
   switch (airtableType) {
+    case 'aiText':
+    case 'singleLineText':
+    case 'multilineText':
+    case 'richText':
+    case 'email':
+    case 'url':
+    case 'phoneNumber':
+    case 'singleSelect':
+    case 'button':
+    case 'barcode':
     case 'date':
     case 'dateTime':
+    case 'syncSource':
       return { type: 'string', readonly: false };
     case 'createdTime':
     case 'lastModifiedTime':
@@ -70,27 +81,46 @@ function mapAirtableTypeToTypeScript(airtableType: string): {
       return { type: 'number', readonly: false };
     case 'checkbox':
       return { type: 'boolean', readonly: false };
-    case 'singleSelect':
     case 'multipleSelects':
       return { type: 'string[]', readonly: false };
     case 'attachment':
-      return { type: 'any[]', readonly: false };
-    case 'collaborator':
+    case 'multipleAttachments':
+      return {
+        type: '{ readonly id: string; url: string; filename: string; type: string; size: number; width?: number; height?: number; thumbnails?: { small?: { url: string; width: number; height: number; }; large?: { url: string; width: number; height: number; }; full?: { url: string; width: number; height: number; }; }; }[]',
+        readonly: false,
+      };
+    case 'singleCollaborator':
+      return {
+        type: '{ id: string; email?: string; name?: string; permissionLevel?: "none" | "read" | "comment" | "edit" | "create"; profilePicUrl?: string; }',
+        readonly: false,
+      };
     case 'multipleCollaborators':
       return {
-        type: '{ id: string; email?: string; name?: string; permissionLevel?: string; profilePicUrl?: string; }[]',
+        type: '{ id: string; email?: string; name?: string; permissionLevel?: "none" | "read" | "comment" | "edit" | "create"; profilePicUrl?: string; }[]',
         readonly: false,
       };
     case 'linkToAnotherRecord':
     case 'multipleRecordLinks':
       return { type: 'string[]', readonly: false };
     case 'lookup':
-    case 'rollup':
       return { type: 'any', readonly: false };
+    case 'rollup':
+      return { type: 'string | number | boolean', readonly: true };
     case 'formula':
-      return { type: 'string | number | boolean | any[]', readonly: true };
-    case 'syncSource':
-      return { type: 'string', readonly: false };
+      return {
+        type: 'string | number | boolean | (string | number)[]',
+        readonly: true,
+      };
+    case 'createdBy':
+      return {
+        type: '{ id: string; email?: string; name?: string; permissionLevel?: "none" | "read" | "comment" | "edit" | "create"; profilePicUrl?: string; }',
+        readonly: true,
+      };
+    case 'lastModifiedBy':
+      return {
+        type: '{ id: string; email?: string; name?: string; permissionLevel?: "none" | "read" | "comment" | "edit" | "create"; profilePicUrl?: string; }',
+        readonly: true,
+      };
     default:
       return { type: 'any', readonly: false };
   }
