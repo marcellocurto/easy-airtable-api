@@ -21,7 +21,7 @@ bun add easy-airtable-api
 ### Get a Single Record
 
 ```ts
-import { getRecord } from "easy-airtable-api";
+import { getRecord } from 'easy-airtable-api';
 
 type Fields = {
   Name?: string;
@@ -30,17 +30,17 @@ type Fields = {
 };
 
 const record = await getRecord<Fields>({
-  apiKey: "apiKey",
-  baseId: "baseId",
-  tableId: "tableId",
-  recordId: "recordId",
+  apiKey: 'apiKey',
+  baseId: 'baseId',
+  tableNameOrId: 'tableNameOrId',
+  recordId: 'recordId',
 });
 ```
 
 ### Get Multiple Records
 
 ```ts
-import { getRecords } from "easy-airtable-api";
+import { getRecords } from 'easy-airtable-api';
 
 type Fields = {
   Name?: string;
@@ -49,16 +49,95 @@ type Fields = {
 };
 
 const records = await getRecords<Fields>({
-  apiKey: "apiKey",
-  baseId: "baseId",
-  tableId: "tableId",
+  apiKey: 'apiKey',
+  baseId: 'baseId',
+  tableNameOrId: 'tableNameOrId',
   options: {
     maxRecords: 500,
   },
 });
 ```
 
+### Update a Single Record
+
+```ts
+import { updateRecord } from 'easy-airtable-api';
+
+type Fields = {
+  Name?: string;
+  Status?: string;
+};
+
+const record = await updateRecord<Fields>({
+  apiKey: 'apiKey',
+  baseId: 'baseId',
+  tableNameOrId: 'tableNameOrId',
+  recordId: 'recordId',
+  options: {
+    typecast: true,
+  },
+  fields: {
+    Name: 'New Name',
+    Status: 'Active',
+  },
+});
+```
+
+### Update Multiple Records
+
+```ts
+import { updateRecords } from 'easy-airtable-api';
+
+type Fields = {
+  Name?: string;
+  Status?: string;
+};
+
+const records = await updateRecords<Fields>({
+  apiKey: 'apiKey',
+  baseId: 'baseId',
+  tableNameOrId: 'tableNameOrId',
+  records: [
+    {
+      id: 'recordId1',
+      fields: {
+        Name: 'New Name 1',
+        Status: 'Active',
+      }
+    },
+    {
+      id: 'recordId2',
+      fields: {
+        Name: 'New Name 2',
+        Status: 'Inactive',
+      }
+    }
+  ],
+  options: {
+    typecast: true,
+  }
+});
+```
+
+### Generate TypeScript Definitions
+
+```ts
+import { generateTypeScriptDefinitions } from 'easy-airtable-api';
+
+const types = await generateTypeScriptDefinitions({
+  apiKey: 'apiKey',
+  baseId: 'baseId',
+  tableNameOrId: 'tableNameOrId',
+});
+console.log(types);
+```
+
 ## Changelog
+
+### 0.0.15
+
+- Type generation wraps type keys in quotations
+- Fix various type generation issues
 
 ### 0.0.14
 
