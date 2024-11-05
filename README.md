@@ -6,6 +6,8 @@ This library makes it easier to work with Airtable by providing TypeScript suppo
 
 While this is still an early project and needs more work, you can already use it to fetch and update records in your Airtable bases.
 
+I'm already using it in production for many projects.
+
 It also supports generating TypeScript definitions for your Airtable tables which is super useful.
 
 ## Install
@@ -131,7 +133,6 @@ const types = await generateTypeScriptDefinitions({
   baseId: 'baseId',
   tableNameOrId: 'tableNameOrId',
 });
-console.log(types);
 ```
 
 ## Changelog

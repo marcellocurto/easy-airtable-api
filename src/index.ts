@@ -5,6 +5,6 @@ export {
   updateRecords,
   updateRecordsUpsert,
   deleteRecords,
-} from './requests.js';
+} from './records.js';
 
 export { generateTypeScriptDefinitions } from './generate-types.js';
