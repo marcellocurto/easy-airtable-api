@@ -126,10 +126,6 @@ export interface DeleteRecordsPathParameters {
   tableIdOrName: TableIdOrName;
 }
 
-export interface DeleteRecordsQueryParameters {
-  records: string[];
-}
-
 export interface DeleteRecordResponse {
   id: string;
   deleted: true;
