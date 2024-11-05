@@ -84,20 +84,31 @@ export async function updateRecord<Fields>({
   tableId,
   recordId,
   fields,
+  options,
 }: {
   apiKey: string;
   baseId: string;
   tableId: string;
   recordId: string;
-  fields: Partial<Fields>;
+  fields: Fields;
+  options?: {
+    typecast?: boolean;
+    returnFieldsByFieldId?: boolean;
+    overwriteFieldsNotSpecified?: boolean;
+  };
 }): Promise<AirtableRecord<Fields>> {
   return await airtableRequest<AirtableRecord<Fields>>({
     apiKey,
     baseId,
     tableId,
     endpoint: `/${recordId}`,
-    method: 'PATCH',
-    body: { fields },
+    method: options?.overwriteFieldsNotSpecified === true ? 'PUT' : 'PATCH',
+    body: {
+      fields,
+      typecast: options?.typecast === true ? true : false,
+      returnFieldsByFieldId:
+        options?.returnFieldsByFieldId === true ? true : false,
+    },
   });
 }
 
@@ -165,24 +176,77 @@ export async function updateRecordsUpsert<Fields>({
   baseId,
   tableId,
   records,
-  typecast,
-  performUpsert,
+  options,
 }: {
   apiKey: string;
   baseId: string;
   tableId: string;
-  records: { id: string; fields: Partial<Fields> }[];
-  typecast?: boolean;
-  performUpsert: { fieldsToMergeOn: (keyof Fields)[] };
-}): Promise<AirtableRecord<Fields>[]> {
-  return await airtableRequest<AirtableRecord<Fields>[]>({
-    apiKey,
-    baseId,
-    tableId,
-    endpoint: '',
-    method: 'PATCH',
-    body: { records, typecast, performUpsert },
-  });
+  records: { id?: string; fields: Fields }[];
+  options?: {
+    fieldsToMergeOn: string[];
+    typecast?: boolean;
+    returnFieldsByFieldId?: boolean;
+    overwriteFieldsNotSpecified?: boolean;
+    requestInterval?: number;
+  };
+}): Promise<{
+  createdRecords: string[];
+  updatedRecords: string[];
+  records: AirtableRecord<Fields>[];
+}> {
+  if (!Array.isArray(records) || records.length === 0) {
+    throw new Error(
+      'The records array is empty or not provided. Please provide a non-empty array of records to update.'
+    );
+  }
+
+  if (
+    !Array.isArray(options?.fieldsToMergeOn) ||
+    options?.fieldsToMergeOn.length === 0
+  ) {
+    throw new Error('fieldsToMergeOn must be an array of strings.');
+  }
+
+  const chunkSize = 10;
+  const chunks = [];
+  for (let i = 0; i < records.length; i += chunkSize) {
+    chunks.push(records.slice(i, i + chunkSize));
+  }
+
+  let allCreatedRecords: string[] = [];
+  let allUpdatedRecords: string[] = [];
+  let allRecords: AirtableRecord<Fields>[] = [];
+
+  for (const chunk of chunks) {
+    const result = await airtableRequest<{
+      createdRecords: string[];
+      updatedRecords: string[];
+      records: AirtableRecord<Fields>[];
+    }>({
+      apiKey,
+      baseId,
+      tableId,
+      endpoint: '/',
+      method: options?.overwriteFieldsNotSpecified === true ? 'PUT' : 'PATCH',
+      body: {
+        records: chunk,
+        typecast: options?.typecast ?? false,
+        returnFieldsByFieldId: options?.returnFieldsByFieldId ?? false,
+        performUpsert: { fieldsToMergeOn: options.fieldsToMergeOn },
+      },
+    });
+
+    allCreatedRecords = allCreatedRecords.concat(result.createdRecords);
+    allUpdatedRecords = allUpdatedRecords.concat(result.updatedRecords);
+    allRecords = allRecords.concat(result.records);
+    await delay(options?.requestInterval ?? 500);
+  }
+
+  return {
+    createdRecords: allCreatedRecords,
+    updatedRecords: allUpdatedRecords,
+    records: allRecords,
+  };
 }
 
 export async function deleteRecords({
