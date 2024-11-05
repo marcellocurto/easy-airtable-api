@@ -65,47 +65,17 @@ export async function getRecords<Fields>({
 }
 
 function validateGetRecordsOptions(options?: GetRecordsQueryParameters) {
-  const validatedOptions: GetRecordsQueryParameters = {};
-
-  if (!options) return validatedOptions;
-
-  if (options.fields) {
-    validatedOptions.fields = options.fields;
+  if (!options) return;
+  if (options.cellFormat === 'string') {
+    if (!options.timeZone || !options.userLocale) {
+      throw new Error(
+        'The timeZone and userLocale parameters are required when using string as the cellFormat.'
+      );
+    }
   }
-
-  if (options.filterByFormula) {
-    validatedOptions.filterByFormula = options.filterByFormula;
+  if (!options.maxRecords) {
+    options.maxRecords = 100;
   }
-
-  if (options.maxRecords) {
-    validatedOptions.maxRecords = options.maxRecords;
-  }
-
-  if (options.pageSize) {
-    validatedOptions.pageSize = options.pageSize;
-  }
-
-  if (options.sort) {
-    validatedOptions.sort = options.sort;
-  }
-
-  if (options.view) {
-    validatedOptions.view = options.view;
-  }
-
-  if (options.cellFormat) {
-    validatedOptions.cellFormat = options.cellFormat;
-  }
-
-  if (options.timeZone) {
-    validatedOptions.timeZone = options.timeZone;
-  }
-
-  if (options.userLocale) {
-    validatedOptions.userLocale = options.userLocale;
-  }
-
-  return validatedOptions;
 }
 
 export async function updateRecord<Fields>({
