@@ -22,7 +22,22 @@ export async function generateTypeScriptDefinitions({
   let typeDefinitions = `type ${table.name}Fields = {\n`;
 
   table.fields.forEach((field) => {
-    typeDefinitions += `  "${field.name}"?: ${mapAirtableTypeToTypeScript(
+    let fieldName;
+    if (field.name.includes('"')) {
+      if (field.name.includes("'")) {
+        if (field.name.includes('`')) {
+          fieldName = field.name;
+        } else {
+          fieldName = `\`${field.name}\``;
+        }
+      } else {
+        fieldName = `'${field.name}'`;
+      }
+    } else {
+      fieldName = `"${field.name}"`;
+    }
+
+    typeDefinitions += `  ${fieldName}?: ${mapAirtableTypeToTypeScript(
       field.type
     )};\n`;
   });
