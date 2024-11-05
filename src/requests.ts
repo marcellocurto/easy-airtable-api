@@ -1,303 +1,9 @@
 import { request, RequestOptions } from 'https';
 import { IncomingMessage } from 'http';
 import { URL } from 'url';
-import {
-  AirtableRecord,
-  DeleteRecordResponse,
-  DeleteRecordsQueryParameters,
-  DeleteRecordsResponse,
-  GetRecordsQueryParameters,
-} from './types/records';
 import { ApiRequest, RequestMethods } from './types/tables';
-import { delay } from './utils.js';
 
-export async function getRecord<Fields>({
-  apiKey,
-  baseId,
-  tableId,
-  recordId,
-}: {
-  apiKey: string;
-  baseId: string;
-  tableId: string;
-  recordId: string;
-}): Promise<AirtableRecord<Fields>> {
-  return await airtableRequest<AirtableRecord<Fields>>({
-    apiKey,
-    baseId,
-    tableId,
-    endpoint: `/${recordId}`,
-    method: 'GET',
-  });
-}
-
-export async function getRecords<Fields>({
-  apiKey,
-  baseId,
-  tableId,
-  options,
-}: {
-  apiKey: string;
-  baseId: string;
-  tableId: string;
-  options?: GetRecordsQueryParameters;
-}): Promise<AirtableRecord<Fields>[]> {
-  validateGetRecordsOptions(options);
-  let records: AirtableRecord<Fields>[] = [];
-  let currentOffset: string | undefined;
-  do {
-    const requestBody = currentOffset
-      ? { ...options, offset: currentOffset }
-      : options;
-    const response = await airtableRequest<{
-      records: AirtableRecord<Fields>[];
-      offset?: string;
-    }>({
-      apiKey,
-      baseId,
-      tableId,
-      endpoint: '/listRecords',
-      method: 'POST',
-      body: requestBody,
-    });
-    records = records.concat(response.records);
-    currentOffset = response.offset;
-    if (currentOffset) await delay(options?.requestInterval ?? 500);
-  } while (currentOffset);
-
-  return records;
-}
-
-function validateGetRecordsOptions(options?: GetRecordsQueryParameters) {
-  if (!options) return;
-  if (options.cellFormat === 'string') {
-    if (!options.timeZone || !options.userLocale) {
-      throw new Error(
-        'The timeZone and userLocale parameters are required when using string as the cellFormat.'
-      );
-    }
-  }
-  if (!options.maxRecords) {
-    options.maxRecords = 100;
-  }
-}
-
-export async function updateRecord<Fields>({
-  apiKey,
-  baseId,
-  tableId,
-  recordId,
-  fields,
-  options,
-}: {
-  apiKey: string;
-  baseId: string;
-  tableId: string;
-  recordId: string;
-  fields: Fields;
-  options?: {
-    typecast?: boolean;
-    returnFieldsByFieldId?: boolean;
-    overwriteFieldsNotSpecified?: boolean;
-  };
-}): Promise<AirtableRecord<Fields>> {
-  return await airtableRequest<AirtableRecord<Fields>>({
-    apiKey,
-    baseId,
-    tableId,
-    endpoint: `/${recordId}`,
-    method: options?.overwriteFieldsNotSpecified === true ? 'PUT' : 'PATCH',
-    body: {
-      fields,
-      typecast: options?.typecast === true ? true : false,
-      returnFieldsByFieldId:
-        options?.returnFieldsByFieldId === true ? true : false,
-    },
-  });
-}
-
-export async function updateRecords<Fields>({
-  apiKey,
-  baseId,
-  tableId,
-  records,
-  options,
-}: {
-  apiKey: string;
-  baseId: string;
-  tableId: string;
-  records: { id: string; fields: Fields }[];
-  options?: {
-    typecast?: boolean;
-    returnFieldsByFieldId?: boolean;
-    overwriteFieldsNotSpecified?: boolean;
-    requestInterval?: number;
-  };
-}): Promise<{
-  records: AirtableRecord<Fields>[];
-}> {
-  if (!Array.isArray(records) || records.length === 0) {
-    throw new Error(
-      'The records array is empty or not provided. Please provide a non-empty array of records to update.'
-    );
-  }
-
-  const chunkSize = 10;
-  const chunks = [];
-  for (let i = 0; i < records.length; i += chunkSize) {
-    chunks.push(records.slice(i, i + chunkSize));
-  }
-
-  let combinedResults: AirtableRecord<Fields>[] = [];
-
-  for (const chunk of chunks) {
-    const result = await airtableRequest<{
-      createdRecords: string[];
-      updatedRecords: string[];
-      records: AirtableRecord<Fields>[];
-    }>({
-      apiKey,
-      baseId,
-      tableId,
-      endpoint: '/',
-      method: options?.overwriteFieldsNotSpecified === true ? 'PUT' : 'PATCH',
-      body: {
-        records: chunk,
-        typecast: options?.typecast ?? false,
-        returnFieldsByFieldId: options?.returnFieldsByFieldId ?? false,
-      },
-    });
-
-    combinedResults = combinedResults.concat(result.records);
-    await delay(options?.requestInterval ?? 500);
-  }
-
-  return { records: combinedResults };
-}
-
-export async function updateRecordsUpsert<Fields>({
-  apiKey,
-  baseId,
-  tableId,
-  records,
-  options,
-}: {
-  apiKey: string;
-  baseId: string;
-  tableId: string;
-  records: { id?: string; fields: Fields }[];
-  options?: {
-    fieldsToMergeOn: string[];
-    typecast?: boolean;
-    returnFieldsByFieldId?: boolean;
-    overwriteFieldsNotSpecified?: boolean;
-    requestInterval?: number;
-  };
-}): Promise<{
-  createdRecords: string[];
-  updatedRecords: string[];
-  records: AirtableRecord<Fields>[];
-}> {
-  if (!Array.isArray(records) || records.length === 0) {
-    throw new Error(
-      'The records array is empty or not provided. Please provide a non-empty array of records to update.'
-    );
-  }
-
-  if (
-    !Array.isArray(options?.fieldsToMergeOn) ||
-    options?.fieldsToMergeOn.length === 0
-  ) {
-    throw new Error('fieldsToMergeOn must be an array of strings.');
-  }
-
-  const chunkSize = 10;
-  const chunks = [];
-  for (let i = 0; i < records.length; i += chunkSize) {
-    chunks.push(records.slice(i, i + chunkSize));
-  }
-
-  let allCreatedRecords: string[] = [];
-  let allUpdatedRecords: string[] = [];
-  let allRecords: AirtableRecord<Fields>[] = [];
-
-  for (const chunk of chunks) {
-    const result = await airtableRequest<{
-      createdRecords: string[];
-      updatedRecords: string[];
-      records: AirtableRecord<Fields>[];
-    }>({
-      apiKey,
-      baseId,
-      tableId,
-      endpoint: '/',
-      method: options?.overwriteFieldsNotSpecified === true ? 'PUT' : 'PATCH',
-      body: {
-        records: chunk,
-        typecast: options?.typecast ?? false,
-        returnFieldsByFieldId: options?.returnFieldsByFieldId ?? false,
-        performUpsert: { fieldsToMergeOn: options.fieldsToMergeOn },
-      },
-    });
-
-    allCreatedRecords = allCreatedRecords.concat(result.createdRecords);
-    allUpdatedRecords = allUpdatedRecords.concat(result.updatedRecords);
-    allRecords = allRecords.concat(result.records);
-    await delay(options?.requestInterval ?? 500);
-  }
-
-  return {
-    createdRecords: allCreatedRecords,
-    updatedRecords: allUpdatedRecords,
-    records: allRecords,
-  };
-}
-
-export async function deleteRecords({
-  apiKey,
-  baseId,
-  tableId,
-  recordIds,
-  options,
-}: {
-  apiKey: string;
-  baseId: string;
-  tableId: string;
-  recordIds: string[];
-  options?: { requestInterval?: number };
-}): Promise<DeleteRecordsResponse> {
-  if (!Array.isArray(recordIds) || recordIds.length === 0) {
-    throw new Error(
-      'The record ids array is empty or not provided. Please provide a non-empty array of record ids to delete the records.'
-    );
-  }
-
-  const chunkSize = 10;
-  const chunks = [];
-  for (let i = 0; i < recordIds.length; i += chunkSize) {
-    chunks.push(recordIds.slice(i, i + chunkSize));
-  }
-
-  let combinedResults: DeleteRecordResponse[] = [];
-
-  for (const chunk of chunks) {
-    const query = chunk.map((id) => `records[]=${id}`).join('&');
-    const result = await airtableRequest<DeleteRecordsResponse>({
-      apiKey,
-      baseId,
-      tableId,
-      endpoint: `?${query}`,
-      method: 'DELETE',
-    });
-
-    combinedResults = combinedResults.concat(result.records);
-    await delay(options?.requestInterval ?? 500);
-  }
-
-  return { records: combinedResults };
-}
-
-async function airtableRequest<T>(request: {
+export async function airtableRequest<T>(request: {
   apiKey: string;
   baseId: string;
   tableId: string;
@@ -332,15 +38,38 @@ async function airtableRequest<T>(request: {
     method,
     body,
   });
-
   validateResponse(response);
 
   return response.data;
 }
 
+interface AirtableErrorResponse {
+  error: {
+    type: string;
+    message: string;
+  };
+}
+
 function validateResponse<T>(response: ApiResponse<T>) {
   const statusCode = response.statusCode;
   if (statusCode === 200) return;
+
+  const isAirtableError = (data: any): data is AirtableErrorResponse => {
+    return (
+      data &&
+      typeof data === 'object' &&
+      'error' in data &&
+      typeof data.error === 'object' &&
+      data.error !== null &&
+      'message' in data.error &&
+      typeof data.error.message === 'string'
+    );
+  };
+
+  if (response.data && isAirtableError(response.data)) {
+    throw new Error(response.data.error.message);
+  }
+
   if (statusCode === 401) throw new Error('Incorrect API Key.');
   else if (statusCode === 403) throw new Error('Not authorized.');
   else if (statusCode === 404) throw new Error('Table or record not found.');
@@ -440,98 +169,19 @@ export async function getBaseSchema({
   apiKey: string;
   baseId: string;
 }): Promise<AirtableBaseSchema> {
-  const response = await fetch(`https://api.airtable.com/v0/meta/bases/${baseId}/tables`, {
-    method: 'GET',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-    },
-  });
+  const response = await fetch(
+    `https://api.airtable.com/v0/meta/bases/${baseId}/tables`,
+    {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+    }
+  );
 
   if (!response.ok) {
     throw new Error(`Error fetching base schema: ${response.statusText}`);
   }
 
   return response.json();
-}
-
-export async function generateTypeScriptDefinitions({
-  apiKey,
-  baseId,
-  tableNameOrId,
-}: {
-  apiKey: string;
-  baseId: string;
-  tableNameOrId: string;
-}): Promise<string> {
-  const schema = await getBaseSchema({ apiKey, baseId });
-
-  const table = schema.tables.find(
-    (t) => t.id === tableNameOrId || t.name === tableNameOrId
-  );
-
-  if (!table) {
-    throw new Error(`Table with name or ID "${tableNameOrId}" not found.`);
-  }
-
-  let typeDefinitions = `type ${table.name}Fields = {\n`;
-
-  table.fields.forEach((field) => {
-    typeDefinitions += `  ${field.name}?: ${mapAirtableTypeToTypeScript(
-      field.type
-    )};\n`;
-  });
-
-  typeDefinitions += '};\n';
-
-  return typeDefinitions;
-}
-
-function mapAirtableTypeToTypeScript(airtableType: string): string {
-  switch (airtableType) {
-    case 'aiText':
-    case 'singleLineText':
-    case 'email':
-    case 'url':
-    case 'phoneNumber':
-    case 'multilineText':
-    case 'richText':
-    case 'button':
-    case 'barcode':
-    case 'createdTime':
-    case 'lastModifiedTime':
-      return 'string';
-    case 'number':
-    case 'currency':
-    case 'percent':
-    case 'rating':
-    case 'duration':
-    case 'autoNumber':
-    case 'count':
-      return 'number';
-    case 'checkbox':
-      return 'boolean';
-    case 'date':
-    case 'dateTime':
-      return 'Date';
-    case 'singleSelect':
-    case 'multipleSelects':
-      return 'string[]';
-    case 'attachment':
-      return 'any[]';
-    case 'collaborator':
-    case 'multipleCollaborators':
-      return '{ id: string; email?: string; name?: string; permissionLevel?: string; profilePicUrl?: string; }[]';
-    case 'linkToAnotherRecord':
-    case 'multipleRecordLinks':
-      return 'string[]';
-    case 'lookup':
-    case 'rollup':
-      return 'any';
-    case 'formula':
-      return 'string | number | boolean | any[]';
-    case 'syncSource':
-      return 'string';
-    default:
-      return 'any';
-  }
 }

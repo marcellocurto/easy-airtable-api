@@ -1,9 +1,12 @@
 export {
   getRecord,
   getRecords,
+  createRecord,
+  createRecords,
   updateRecord,
   updateRecords,
   updateRecordsUpsert,
   deleteRecords,
-  generateTypeScriptDefinitions,
-} from './requests.js';
+} from './records.js';
+
+export { generateTypeScriptDefinitions } from './generate-types.js';

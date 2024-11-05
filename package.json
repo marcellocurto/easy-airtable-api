@@ -1,6 +1,6 @@
 {
   "name": "easy-airtable-api",
-  "version": "0.0.14",
+  "version": "0.0.15",
   "type": "module",
   "description": "An easy way to connect to Airtable via their API.",
   "main": "lib/index.js",
@@ -17,6 +17,7 @@
     "lint": "eslint 'src/**/*.{ts,tsx}'",
     "test": "vitest",
     "testGetRecords": "vitest get-records.test.ts",
+    "testCreateRecords": "vitest create-records.test.ts",
     "testUpdateRecords": "vitest update-records.test.ts",
     "testDeleteRecords": "vitest delete-records.test.ts"
   },
