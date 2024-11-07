@@ -38,9 +38,7 @@ export async function generateTypeScriptDefinitions({
     }
 
     const typeInfo = mapAirtableTypeToTypeScript(field.type);
-    const fieldType = typeInfo.readonly
-      ? `readonly ${typeInfo.type}`
-      : typeInfo.type;
+    const fieldType = typeInfo.type;
     typeDefinitions += `  ${fieldName}?: ${fieldType};\n`;
   });
 
@@ -86,7 +84,7 @@ function mapAirtableTypeToTypeScript(airtableType: string): {
     case 'attachment':
     case 'multipleAttachments':
       return {
-        type: '{ readonly id: string; url: string; filename: string; type: string; size: number; width?: number; height?: number; thumbnails?: { small?: { url: string; width: number; height: number; }; large?: { url: string; width: number; height: number; }; full?: { url: string; width: number; height: number; }; }; }[]',
+        type: '{ id: string; url: string; filename: string; type: string; size: number; width?: number; height?: number; thumbnails?: { small?: { url: string; width: number; height: number; }; large?: { url: string; width: number; height: number; }; full?: { url: string; width: number; height: number; }; }; }[]',
         readonly: false,
       };
     case 'singleCollaborator':

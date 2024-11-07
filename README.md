@@ -137,6 +137,10 @@ const types = await generateTypeScriptDefinitions({
 
 ## Changelog
 
+### 0.0.16
+
+- Improved type generation to support more Airtable field types.
+
 ### 0.0.15
 
 - Type generation wraps type keys in quotations
