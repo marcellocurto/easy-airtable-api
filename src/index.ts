@@ -9,4 +9,9 @@ export {
   deleteRecords,
 } from './records.js';
 
-export { generateTypeScriptDefinitions } from './generate-types.js';
+export type { AirtableRecord } from './types/records.js';
+export type {
+  Attachment,
+  AttachmentWrite,
+  Collaborator,
+} from './types/fields.js';

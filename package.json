@@ -7,8 +7,16 @@
   "types": "lib/index.d.ts",
   "exports": {
     ".": {
+      "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
+    },
+    "./codegen": {
+      "types": "./lib/codegen/index.d.ts",
+      "import": "./lib/codegen/index.js"
     }
+  },
+  "bin": {
+    "easy-airtable-api": "./lib/cli.js"
   },
   "scripts": {
     "watch": "tsc --watch",

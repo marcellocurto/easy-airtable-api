@@ -2,6 +2,7 @@ import { request, RequestOptions } from 'https';
 import { IncomingMessage } from 'http';
 import { URL } from 'url';
 import { ApiRequest, RequestMethods } from './types/tables';
+import type { AirtableBaseSchema } from './types/metadata.js';
 
 export async function airtableRequest<T>(request: {
   apiKey: string;
@@ -143,24 +144,6 @@ async function apiRequest<T>({
     req.end();
   });
 }
-
-type AirtableField = {
-  id: string;
-  name: string;
-  type: string;
-  options?: object;
-};
-
-type AirtableTable = {
-  id: string;
-  name: string;
-  primaryFieldId: string;
-  fields: AirtableField[];
-};
-
-type AirtableBaseSchema = {
-  tables: AirtableTable[];
-};
 
 export async function getBaseSchema({
   apiKey,

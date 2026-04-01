@@ -1,14 +1,19 @@
 # Easy Airtable API
 
-I created this as a simpler alternative to the official Airtable Node.js library.
+Easy Airtable API is a lightweight, TypeScript-first Airtable client for reading, creating, updating, upserting, and deleting records.
 
-This library makes it easier to work with Airtable by providing TypeScript support and straightforward functions for reading and writing records.
+It is built to stay practical:
 
-While this is still an early project and needs more work, you can already use it to fetch and update records in your Airtable bases.
+- small runtime API
+- typed CRUD helpers
+- code generation from Airtable metadata
+- a better fit for app code than a large SDK surface
 
-I'm already using it in production for many projects.
+The intended workflow is simple:
 
-It also supports generating TypeScript definitions for your Airtable tables which is super useful.
+1. generate types from your Airtable base
+2. import the generated types in your app
+3. use the runtime helpers with those types
 
 ## Install
 
@@ -20,197 +25,279 @@ npm install easy-airtable-api
 bun add easy-airtable-api
 ```
 
-## How to Use
+## Recommended project setup
 
-### Get a Single Record
+A good setup is to generate Airtable types once and commit the generated file.
+
+### Example file structure
+
+```txt
+.
+├── scripts/
+│   └── generate-airtable-types.ts
+├── src/
+│   ├── airtable.generated.ts
+│   └── airtable.ts
+├── .env
+└── package.json
+```
+
+### Example environment variables
+
+```bash
+AIRTABLE_ACCESS_TOKEN=pat_xxx
+AIRTABLE_BASE_ID=app_xxx
+AIRTABLE_PROJECTS_TABLE_ID=tbl_xxx
+```
+
+### Example `package.json` scripts
+
+```json
+{
+  "scripts": {
+    "airtable:types": "tsx scripts/generate-airtable-types.ts"
+  }
+}
+```
+
+## 1) Generate types into your project
+
+Create `scripts/generate-airtable-types.ts`:
+
+```ts
+import { generateAirtableTypes } from 'easy-airtable-api/codegen';
+
+await generateAirtableTypes({
+  source: {
+    baseId: process.env.AIRTABLE_BASE_ID!,
+    accessToken: process.env.AIRTABLE_ACCESS_TOKEN!,
+  },
+  output: './src/airtable.generated.ts',
+  enumMode: 'hybrid',
+});
+```
+
+Then run:
+
+```bash
+npm run airtable:types
+```
+
+## 2) Use the generated types in your app
+
+Create `src/airtable.ts`:
+
+```ts
+import { createRecord, getRecords, updateRecord } from 'easy-airtable-api';
+import type {
+  ProjectsCreateFields,
+  ProjectsRecordFields,
+} from './airtable.generated';
+
+const apiKey = process.env.AIRTABLE_ACCESS_TOKEN!;
+const baseId = process.env.AIRTABLE_BASE_ID!;
+const tableId = process.env.AIRTABLE_PROJECTS_TABLE_ID!;
+
+export async function listProjects() {
+  return getRecords<ProjectsRecordFields>({
+    apiKey,
+    baseId,
+    tableId,
+    options: {
+      maxRecords: 100,
+    },
+  });
+}
+
+export async function createProject(fields: ProjectsCreateFields) {
+  return createRecord<ProjectsCreateFields>({
+    apiKey,
+    baseId,
+    tableId,
+    fields,
+    options: {
+      typecast: true,
+    },
+  });
+}
+
+export async function markProjectInProgress(recordId: string) {
+  return updateRecord<ProjectsCreateFields>({
+    apiKey,
+    baseId,
+    tableId,
+    recordId,
+    fields: {
+      Status: 'In Progress',
+    },
+  });
+}
+```
+
+## Codegen
+
+### `generateAirtableTypes()`
+
+```ts
+import { generateAirtableTypes } from 'easy-airtable-api/codegen';
+```
+
+Supported schema sources:
+
+- Airtable metadata API via `baseId` + `accessToken` / `apiKey`
+- local schema file via `schemaPath`
+- in-memory schema object via `schema`
+
+Example using a local schema file:
+
+```ts
+await generateAirtableTypes({
+  source: {
+    schemaPath: './airtable-schema.json',
+  },
+  output: './src/airtable.generated.ts',
+});
+```
+
+### Enum typing modes
+
+Choice-like fields such as single select and multiple select support 3 modes:
+
+- `literal` — exact Airtable option values only
+- `hybrid` — exact Airtable values plus a string fallback
+- `broad` — generic `string` / `string[]`
+
+`hybrid` is the default and usually the best fit for real Airtable projects because it preserves autocomplete while tolerating schema drift.
+
+### Useful codegen options
+
+```ts
+await generateAirtableTypes({
+  source: {
+    baseId: process.env.AIRTABLE_BASE_ID!,
+    accessToken: process.env.AIRTABLE_ACCESS_TOKEN!,
+  },
+  output: './src/airtable.generated.ts',
+  tableNameOrId: ['Projects', 'Tasks'],
+  enumMode: 'hybrid',
+  createRequiredMode: 'allOptional',
+  unknownFieldBehavior: 'unknown',
+  includeTableIds: true,
+  includeFieldIds: true,
+  schemaMode: 'full',
+});
+```
+
+## Runtime examples
+
+### Get a single record
 
 ```ts
 import { getRecord } from 'easy-airtable-api';
+import type { ProjectsRecordFields } from './airtable.generated';
 
-type Fields = {
-  Name?: string;
-  Notes?: string;
-  Status?: string;
-};
-
-const record = await getRecord<Fields>({
-  apiKey: 'apiKey',
-  baseId: 'baseId',
-  tableNameOrId: 'tableNameOrId',
-  recordId: 'recordId',
+const record = await getRecord<ProjectsRecordFields>({
+  apiKey: process.env.AIRTABLE_ACCESS_TOKEN!,
+  baseId: process.env.AIRTABLE_BASE_ID!,
+  tableId: process.env.AIRTABLE_PROJECTS_TABLE_ID!,
+  recordId: 'rec123',
 });
 ```
 
-### Get Multiple Records
+### Create multiple records
 
 ```ts
-import { getRecords } from 'easy-airtable-api';
+import { createRecords } from 'easy-airtable-api';
+import type { ProjectsCreateFields } from './airtable.generated';
 
-type Fields = {
-  Name?: string;
-  Notes?: string;
-  Status?: string;
-};
-
-const records = await getRecords<Fields>({
-  apiKey: 'apiKey',
-  baseId: 'baseId',
-  tableNameOrId: 'tableNameOrId',
-  options: {
-    maxRecords: 500,
-  },
-});
-```
-
-### Update a Single Record
-
-```ts
-import { updateRecord } from 'easy-airtable-api';
-
-type Fields = {
-  Name?: string;
-  Status?: string;
-};
-
-const record = await updateRecord<Fields>({
-  apiKey: 'apiKey',
-  baseId: 'baseId',
-  tableNameOrId: 'tableNameOrId',
-  recordId: 'recordId',
-  options: {
-    typecast: true,
-  },
-  fields: {
-    Name: 'New Name',
-    Status: 'Active',
-  },
-});
-```
-
-### Update Multiple Records
-
-```ts
-import { updateRecords } from 'easy-airtable-api';
-
-type Fields = {
-  Name?: string;
-  Status?: string;
-};
-
-const records = await updateRecords<Fields>({
-  apiKey: 'apiKey',
-  baseId: 'baseId',
-  tableNameOrId: 'tableNameOrId',
+const result = await createRecords<ProjectsCreateFields>({
+  apiKey: process.env.AIRTABLE_ACCESS_TOKEN!,
+  baseId: process.env.AIRTABLE_BASE_ID!,
+  tableId: process.env.AIRTABLE_PROJECTS_TABLE_ID!,
   records: [
     {
-      id: 'recordId1',
       fields: {
-        Name: 'New Name 1',
-        Status: 'Active',
-      }
+        Name: 'Project A',
+        Status: 'Todo',
+      },
     },
     {
-      id: 'recordId2',
       fields: {
-        Name: 'New Name 2',
-        Status: 'Inactive',
-      }
-    }
+        Name: 'Project B',
+        Status: 'In Progress',
+      },
+    },
   ],
   options: {
     typecast: true,
-  }
+  },
 });
 ```
 
-### Generate TypeScript Definitions
+### Upsert records
 
 ```ts
-import { generateTypeScriptDefinitions } from 'easy-airtable-api';
+import { updateRecordsUpsert } from 'easy-airtable-api';
+import type { ProjectsCreateFields } from './airtable.generated';
 
-const types = await generateTypeScriptDefinitions({
-  apiKey: 'apiKey',
-  baseId: 'baseId',
-  tableNameOrId: 'tableNameOrId',
+const result = await updateRecordsUpsert<ProjectsCreateFields>({
+  apiKey: process.env.AIRTABLE_ACCESS_TOKEN!,
+  baseId: process.env.AIRTABLE_BASE_ID!,
+  tableId: process.env.AIRTABLE_PROJECTS_TABLE_ID!,
+  records: [
+    {
+      fields: {
+        Name: 'Project A',
+        Status: 'Done',
+      },
+    },
+  ],
+  options: {
+    fieldsToMergeOn: ['Name'],
+    typecast: true,
+  },
 });
+```
+
+### Delete records
+
+```ts
+import { deleteRecords } from 'easy-airtable-api';
+
+await deleteRecords({
+  apiKey: process.env.AIRTABLE_ACCESS_TOKEN!,
+  baseId: process.env.AIRTABLE_BASE_ID!,
+  tableId: process.env.AIRTABLE_PROJECTS_TABLE_ID!,
+  recordIds: ['rec123', 'rec456'],
+});
+```
+
+## Exports
+
+Runtime package:
+
+```ts
+import {
+  createRecord,
+  createRecords,
+  deleteRecords,
+  getRecord,
+  getRecords,
+  updateRecord,
+  updateRecords,
+  updateRecordsUpsert,
+} from 'easy-airtable-api';
+```
+
+Codegen package:
+
+```ts
+import {
+  buildAirtableTypes,
+  generateAirtableTypes,
+} from 'easy-airtable-api/codegen';
 ```
 
 ## Changelog
 
-### 0.0.16
-
-- Improved type generation to support more Airtable field types.
-
-### 0.0.15
-
-- Type generation wraps type keys in quotations
-- Fix various type generation issues
-- added createRecords and createRecord methods
-
-### 0.0.14
-
-- Exported generateTypeScriptDefinitions function.
-
-### 0.0.13
-
-- Added generateTypeScriptDefinitions function to generate TypeScript definitions for Airtable tables.
-
-### 0.0.12
-
-- Reverted making apiKey, baseId, tableId default to undefined
-- Added option to customize delay between requests via options.requestInterval
-
-### 0.0.11
-
-- Make apiKey, baseId, tableId default to undefined #12
-- Missing .js in utils import #13
-
-### 0.0.10
-
-- Fixed deleteRecords implementation errors.
-
-### 0.0.9
-
-- Implemented the deleteRecords method.
-
-### 0.0.8
-
-- Implemented the updateRecords method.
-- Implemented the updateRecordsUpsert method.
-- Added a delay when executing many requests in succession.
-- Fixed the updateRecord and updateRecords methods to return correct field types.
-
-### 0.0.7
-
-- Added all available options for updateRecords.
-- Modified the getRecords function to automatically retrieve all records.
-
-### 0.0.6
-
-- Added all available options for updateRecord.
-- Corrected the path to index.d.ts.
-
-### 0.0.5
-
-- Discontinued CJS build, supporting only ESM for now.
-
-### 0.0.4
-
-- Exported all available methods.
-- Restructured the lib folder to eliminate duplicate types.
-
-### 0.0.3
-
-- Supported both ESM & CJS builds.
-- Enhanced server error handling.
-- Introduced generic field types.
-
-### 0.0.2
-
-- Developed basic request functions to retrieve or update records.
-- Added type definitions for requests and fields.
-- Conducted basic tests to verify the core functionality of the library.
-
-### 0.0.1
-
-- Initial project setup with no real functionality implemented.
+See [CHANGELOG.md](./CHANGELOG.md).
