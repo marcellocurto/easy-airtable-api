@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.17
+
+- TBD
+
 ## 0.0.16
 
 - Improved type generation to support more Airtable field types.
