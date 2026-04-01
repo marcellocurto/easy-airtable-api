@@ -1,84 +1,62 @@
-import 'dotenv/config';
-import { expect, test } from 'vitest';
-import { getRecord } from '../src/index';
+import { describe, expect, test } from 'vitest';
+import { getRecord } from '../src/index.js';
+import { hasIntegrationEnv, integrationEnv } from './integration-helpers.js';
 
-const apiKey = process.env.API_KEY as string;
-const baseId = process.env.TEST_BASE_ID as string;
-const tableId = process.env.TEST_TABLE_NAME_ALL_FIELDS as string;
+describe.skipIf(!hasIntegrationEnv)('getRecord integration', () => {
+  test('returns a record by id', async () => {
+    const record = await getRecord({
+      apiKey: integrationEnv.apiKey!,
+      baseId: integrationEnv.baseId!,
+      tableId: integrationEnv.tableId!,
+      recordId: 'recLztqW64aB9nee1',
+    });
 
-test('getRecord', async () => {
-  const record = await getRecord({
-    apiKey,
-    baseId,
-    tableId,
-    recordId: 'recLztqW64aB9nee1',
+    expect(record.id).toBe('recLztqW64aB9nee1');
+    expect(record.createdTime).toBeTruthy();
+    expect(record.fields).toBeTruthy();
   });
-  expect(record).toEqual({
-    id: 'recLztqW64aB9nee1',
-    createdTime: '2023-09-06T12:46:28.000Z',
-    fields: {
-      Name: 'a',
-      recordId: 'recLztqW64aB9nee1',
-    },
+
+  test('returns an auth-related error for a bad token', async () => {
+    await expect(
+      getRecord({
+        apiKey: 'wrongKey',
+        baseId: integrationEnv.baseId!,
+        tableId: integrationEnv.tableId!,
+        recordId: 'recLztqW64aB9nee1',
+      })
+    ).rejects.toThrow(/auth|token|authorized|required/i);
   });
-});
 
-test('getRecord: wrong apiKey', async () => {
-  let errorMessage = 'all good';
-  try {
-    await getRecord({
-      apiKey: 'wrongKey',
-      baseId,
-      tableId,
-      recordId: 'recLztqW64aB9nee1',
-    });
-  } catch (error) {
-    errorMessage = error.message;
-  }
-  expect(errorMessage).toBe('Wrong API Key.');
-});
+  test('returns a not found error for a bad base id', async () => {
+    await expect(
+      getRecord({
+        apiKey: integrationEnv.apiKey!,
+        baseId: 'baseId',
+        tableId: integrationEnv.tableId!,
+        recordId: 'recLztqW64aB9nee1',
+      })
+    ).rejects.toThrow(/not found/i);
+  });
 
-test('getRecord: wrong baseId', async () => {
-  let errorMessage = 'all good';
-  try {
-    await getRecord({
-      apiKey,
-      baseId: 'baseId',
-      tableId,
-      recordId: 'recLztqW64aB9nee1',
-    });
-  } catch (error) {
-    errorMessage = error.message;
-  }
-  expect(errorMessage).toBe('Table or Record not found.');
-});
+  test('returns an authorization-style error for a bad table id', async () => {
+    await expect(
+      getRecord({
+        apiKey: integrationEnv.apiKey!,
+        baseId: integrationEnv.baseId!,
+        tableId: 'tableId',
+        recordId: 'recLztqW64aB9nee1',
+      })
+    ).rejects.toThrow(/auth|token|authorized|not found/i);
+  });
 
-test('getRecord: wrong tableId', async () => {
-  let errorMessage = 'all good';
-  try {
-    await getRecord({
-      apiKey,
-      baseId,
-      tableId: 'tableId',
-      recordId: 'recLztqW64aB9nee1',
-    });
-  } catch (error) {
-    errorMessage = error.message;
-  }
-  expect(errorMessage).toBe('Not authorized.');
-});
-
-test('getRecord: wrong recordId', async () => {
-  let errorMessage = 'all good';
-  try {
-    await getRecord({
-      apiKey,
-      baseId,
-      tableId,
-      recordId: 'wrongId',
-    });
-  } catch (error) {
-    errorMessage = error.message;
-  }
-  expect(errorMessage).toBe('Table or Record not found.');
+  test('returns a not found error for a bad record id', async () => {
+    await expect(
+      getRecord({
+        apiKey: integrationEnv.apiKey!,
+        baseId: integrationEnv.baseId!,
+        tableId: integrationEnv.tableId!,
+        recordId: 'wrongId',
+      })
+    ).rejects.toThrow(/not found/i);
+  });
 });

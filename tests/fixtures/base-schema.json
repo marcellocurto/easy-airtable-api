@@ -1,0 +1,112 @@
+{
+  "tables": [
+    {
+      "id": "tblProjects123456",
+      "name": "Projects",
+      "primaryFieldId": "fldProjectName123",
+      "fields": [
+        {
+          "id": "fldProjectName123",
+          "name": "Name",
+          "type": "singleLineText"
+        },
+        {
+          "id": "fldStatus123456",
+          "name": "Status",
+          "type": "singleSelect",
+          "options": {
+            "choices": [
+              { "id": "sel1", "name": "Todo" },
+              { "id": "sel2", "name": "In Progress" },
+              { "id": "sel3", "name": "Done" }
+            ]
+          }
+        },
+        {
+          "id": "fldTags12345678",
+          "name": "Tags",
+          "type": "multipleSelects",
+          "options": {
+            "choices": [
+              { "id": "tag1", "name": "Bug" },
+              { "id": "tag2", "name": "Feature" }
+            ]
+          }
+        },
+        {
+          "id": "fldAssets123456",
+          "name": "Assets",
+          "type": "multipleAttachments",
+          "options": {
+            "isReversed": false
+          }
+        },
+        {
+          "id": "fldEstimate1234",
+          "name": "Estimate",
+          "type": "number"
+        },
+        {
+          "id": "fldOwner1234567",
+          "name": "Owner",
+          "type": "singleCollaborator",
+          "options": {}
+        },
+        {
+          "id": "fldCreated12345",
+          "name": "Created",
+          "type": "createdTime"
+        },
+        {
+          "id": "fldTotal1234567",
+          "name": "Total",
+          "type": "formula",
+          "options": {
+            "result": {
+              "type": "currency"
+            }
+          }
+        },
+        {
+          "id": "fldLookup123456",
+          "name": "Lookup Notes",
+          "type": "lookup",
+          "options": {
+            "result": {
+              "type": "singleLineText"
+            }
+          }
+        },
+        {
+          "id": "fldMystery12345",
+          "name": "Mystery",
+          "type": "mysteryField"
+        }
+      ]
+    },
+    {
+      "id": "tblCollision000111",
+      "name": "Foo Bar",
+      "primaryFieldId": "fldDue111111111",
+      "fields": [
+        {
+          "id": "fldDue111111111",
+          "name": "Due Date",
+          "type": "date"
+        }
+      ]
+    },
+    {
+      "id": "tblCollision000222",
+      "name": "Foo-Bar",
+      "primaryFieldId": "fldDue222222222",
+      "fields": [
+        {
+          "id": "fldDue222222222",
+          "name": "Due Date",
+          "type": "date"
+        }
+      ]
+    }
+  ]
+}

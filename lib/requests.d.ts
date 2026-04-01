@@ -1,4 +1,5 @@
-import { RequestMethods } from './types/tables';
+import { RequestMethods } from './types/tables.js';
+import type { AirtableBaseSchema } from './types/metadata.js';
 export declare function airtableRequest<T>(request: {
     apiKey: string;
     baseId: string;
@@ -8,23 +9,7 @@ export declare function airtableRequest<T>(request: {
     body?: object;
     apiURL?: string;
 }): Promise<T>;
-type AirtableField = {
-    id: string;
-    name: string;
-    type: string;
-    options?: object;
-};
-type AirtableTable = {
-    id: string;
-    name: string;
-    primaryFieldId: string;
-    fields: AirtableField[];
-};
-type AirtableBaseSchema = {
-    tables: AirtableTable[];
-};
 export declare function getBaseSchema({ apiKey, baseId, }: {
     apiKey: string;
     baseId: string;
 }): Promise<AirtableBaseSchema>;
-export {};

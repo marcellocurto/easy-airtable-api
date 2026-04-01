@@ -96,7 +96,7 @@ export interface CollaboratorCell {
 
 export interface SingleCollaboratorFieldTypeAndOptions {
   type: 'singleCollaborator';
-  options: {};
+  options: Record<string, never>;
 }
 
 export type CountCell = number;
@@ -120,7 +120,7 @@ export type CreatedTimeCell = string;
 export interface CreatedTimeFieldTypeAndOptions {
   type: 'createdTime';
   options: {
-    result?: any;
+    result?: unknown;
   };
 }
 
@@ -192,7 +192,7 @@ export interface FormulaFieldTypeAndOptions {
     formula: string;
     isValid: boolean;
     referencedFieldIds: string[] | null;
-    result: any;
+    result: unknown;
   };
 }
 
@@ -214,7 +214,7 @@ export interface LastModifiedTimeFieldTypeAndOptions {
   options: {
     isValid: boolean;
     referencedFieldIds: string[] | null;
-    result: any;
+    result: unknown;
   };
 }
 
@@ -238,9 +238,9 @@ export interface LongTextFieldTypeAndOptions {
   type: 'multilineText';
 }
 
-export type LookupCellV1 = (number | string | boolean | any)[];
+export type LookupCellV1 = (number | string | boolean | unknown)[];
 export type LookupCellV2 = {
-  valuesByLinkedRecordId: { [key: string]: any[] };
+  valuesByLinkedRecordId: { [key: string]: unknown[] };
   linkedRecordIds: string[];
 };
 
@@ -250,7 +250,7 @@ export interface LookupFieldTypeAndOptions {
     fieldIdInLinkedTable: string | null;
     isValid: boolean;
     recordLinkFieldId: string | null;
-    result: any;
+    result: unknown;
   };
 }
 
@@ -337,7 +337,7 @@ export type RatingOptions = {
 export type RollupOptions = {
   fieldIdInLinkedTable?: string;
   recordLinkFieldId?: string;
-  result?: any;
+  result?: unknown;
   isValid?: boolean;
   referencedFieldIds?: string[];
 };

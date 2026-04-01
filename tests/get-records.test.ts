@@ -1,10 +1,6 @@
-import 'dotenv/config';
-import { expect, test } from 'vitest';
-import { getRecords } from '../src/index';
-
-const apiKey = process.env.API_KEY as string;
-const baseId = process.env.TEST_BASE_ID as string;
-const tableId = process.env.TEST_TABLE_NAME_ALL_FIELDS as string;
+import { describe, expect, test } from 'vitest';
+import { getRecords } from '../src/index.js';
+import { hasIntegrationEnv, integrationEnv } from './integration-helpers.js';
 
 type TestFields = {
   Name?: string;
@@ -13,17 +9,17 @@ type TestFields = {
   recordId?: string;
 };
 
-test('getRecords', async () => {
-  const records = await getRecords<TestFields>({
-    apiKey,
-    baseId,
-    tableId,
-    options: {
-      maxRecords: 50000,
-    },
+describe.skipIf(!hasIntegrationEnv)('getRecords integration', () => {
+  test('returns at least one record', async () => {
+    const records = await getRecords<TestFields>({
+      apiKey: integrationEnv.apiKey!,
+      baseId: integrationEnv.baseId!,
+      tableId: integrationEnv.tableId!,
+      options: {
+        maxRecords: 50000,
+      },
+    });
+
+    expect(records.length).toBeGreaterThan(0);
   });
-
-  console.log(records.length);
-
-  expect(records.length > 0).toBe(true);
 });
