@@ -9,7 +9,7 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
-export function getRecordValue<T extends unknown = unknown>(
+export function getRecordValue<T = unknown>(
   value: unknown,
   key: string
 ): T | undefined {

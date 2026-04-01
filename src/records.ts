@@ -3,8 +3,8 @@ import {
   DeleteRecordResponse,
   DeleteRecordsResponse,
   GetRecordsQueryParameters,
-} from './types/records';
-import { airtableRequest } from './requests';
+} from './types/records.js';
+import { airtableRequest } from './requests.js';
 import { delay } from './utils.js';
 
 export async function getRecord<Fields>({

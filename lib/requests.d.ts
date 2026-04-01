@@ -1,4 +1,4 @@
-import { RequestMethods } from './types/tables';
+import { RequestMethods } from './types/tables.js';
 import type { AirtableBaseSchema } from './types/metadata.js';
 export declare function airtableRequest<T>(request: {
     apiKey: string;

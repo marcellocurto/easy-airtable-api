@@ -4,7 +4,7 @@ export type AirtableRecord<Fields = DefaultFieldsType> = {
     fields: Fields;
 };
 type DefaultFieldsType = {
-    [key: string]: any;
+    [key: string]: unknown;
 };
 type BaseId = string;
 type TableIdOrName = string;

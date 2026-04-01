@@ -1,4 +1,4 @@
-import { AirtableRecord, DeleteRecordsResponse, GetRecordsQueryParameters } from './types/records';
+import { AirtableRecord, DeleteRecordsResponse, GetRecordsQueryParameters } from './types/records.js';
 export declare function getRecord<Fields>({ apiKey, baseId, tableId, recordId, }: {
     apiKey: string;
     baseId: string;

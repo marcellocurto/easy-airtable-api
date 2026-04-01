@@ -1,7 +1,7 @@
 import { request, RequestOptions } from 'https';
 import { IncomingMessage } from 'http';
 import { URL } from 'url';
-import { ApiRequest, RequestMethods } from './types/tables';
+import { ApiRequest, RequestMethods } from './types/tables.js';
 import type { AirtableBaseSchema } from './types/metadata.js';
 
 export async function airtableRequest<T>(request: {
@@ -55,9 +55,9 @@ function validateResponse<T>(response: ApiResponse<T>) {
   const statusCode = response.statusCode;
   if (statusCode === 200) return;
 
-  const isAirtableError = (data: any): data is AirtableErrorResponse => {
+  const isAirtableError = (data: unknown): data is AirtableErrorResponse => {
     return (
-      data &&
+      data !== null &&
       typeof data === 'object' &&
       'error' in data &&
       typeof data.error === 'object' &&
