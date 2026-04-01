@@ -1,6 +1,7 @@
 /node_modules
 /src/
 /tests/
+AGENT.md
 .eslintrc.cjs
 .env
 tsconfig.json

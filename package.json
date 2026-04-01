@@ -2,7 +2,7 @@
   "name": "easy-airtable-api",
   "version": "0.0.16",
   "type": "module",
-  "description": "An easy way to connect to Airtable via their API.",
+  "description": "Lightweight TypeScript-first Airtable client with metadata-based type generation.",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "exports": {
@@ -23,11 +23,10 @@
     "build": "rm -r ./lib && tsc",
     "publish": "npm publish",
     "lint": "eslint 'src/**/*.{ts,tsx}'",
-    "test": "vitest",
-    "testGetRecords": "vitest get-records.test.ts",
-    "testCreateRecords": "vitest create-records.test.ts",
-    "testUpdateRecords": "vitest update-records.test.ts",
-    "testDeleteRecords": "vitest delete-records.test.ts"
+    "test": "npm run test:codegen",
+    "test:codegen": "vitest run tests/codegen.test.ts",
+    "test:integration": "RUN_AIRTABLE_INTEGRATION_TESTS=true vitest run tests/get-record.test.ts tests/get-records.test.ts tests/create-records.test.ts tests/update-records.test.ts tests/delete-records.test.ts",
+    "test:all": "vitest run"
   },
   "keywords": [
     "airtable"

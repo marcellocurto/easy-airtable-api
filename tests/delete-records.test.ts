@@ -1,28 +1,18 @@
-import 'dotenv/config';
-import { expect, test } from 'vitest';
-import { deleteRecords } from '../src/requests';
+import { describe, expect, test } from 'vitest';
+import { deleteRecords } from '../src/index.js';
+import { hasIntegrationEnv, integrationEnv } from './integration-helpers.js';
 
-const apiKey = process.env.API_KEY as string;
-const baseId = process.env.TEST_BASE_ID as string;
-const tableId = process.env.TEST_TABLE_NAME_ALL_FIELDS as string;
+describe.skipIf(!hasIntegrationEnv)('deleteRecords integration', () => {
+  test('deletes records through the public API', async () => {
+    const recordIds = ['recLztqW64aB9nee1', 'recP3kAIPZjv22OOI'];
 
-type TestFields = {
-  Name?: string;
-  Notes?: string;
-  Status?: string;
-  recordId?: string;
-};
+    const response = await deleteRecords({
+      apiKey: integrationEnv.apiKey!,
+      baseId: integrationEnv.baseId!,
+      tableId: integrationEnv.tableId!,
+      recordIds,
+    });
 
-test('deleteRecords', async () => {
-  const recordIds = ['recLztqW64aB9nee1', 'recP3kAIPZjv22OOI'];
-
-  const response = await deleteRecords({
-    apiKey,
-    baseId,
-    tableId,
-    recordIds,
+    expect(response.records.length).toBe(recordIds.length);
   });
-
-  console.log(response);
-  expect(response.records.length).toBe(recordIds.length);
 });
