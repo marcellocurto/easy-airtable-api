@@ -2,7 +2,12 @@
 
 ## 0.0.17
 
-- TBD
+- Reworked Airtable type generation around the new `easy-airtable-api/codegen` workflow.
+- Added public metadata/base helpers: `listBases`, `getBaseSchema`, and verified `createBase`.
+- Added `airtableRequestRaw` as a public escape hatch for unsupported Airtable endpoints.
+- Hardened the shared request layer with structured `AirtableApiError`, retries, `Retry-After`, jittered backoff, safer encoding, and configurable retry options.
+- Added record API parity helpers including `deleteRecord`, `replaceRecord`, `replaceRecords`, `getRecord(..., options)`, `getRecordsPage`, and `iterateRecordsPages`.
+- Expanded offline and opt-in integration test coverage for retries, batching, validation, metadata, codegen, and non-mutation guarantees.
 
 ## 0.0.16
 

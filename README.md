@@ -1,6 +1,6 @@
 # Easy Airtable API
 
-Easy Airtable API is a lightweight, TypeScript-first Airtable client for reading, creating, updating, upserting, and deleting records.
+Easy Airtable API is a lightweight, TypeScript-first Airtable client for records, metadata/base APIs, code generation, and raw Airtable requests.
 
 It is built to stay practical:
 
@@ -48,6 +48,7 @@ A good setup is to generate Airtable types once and commit the generated file.
 AIRTABLE_ACCESS_TOKEN=pat_xxx
 AIRTABLE_BASE_ID=app_xxx
 AIRTABLE_PROJECTS_TABLE_ID=tbl_xxx
+AIRTABLE_WORKSPACE_ID=wsp_xxx
 ```
 
 ### Example `package.json` scripts
