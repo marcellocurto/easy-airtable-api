@@ -43,31 +43,3 @@ export type GetBaseSchemaResponse = {
   tables: Table[];
 };
 
-type TableConfigFieldOptions = {
-  color?: string;
-  icon?: string;
-};
-
-type TableConfigField = {
-  description?: string;
-  name: string;
-  type: string;
-  options?: TableConfigFieldOptions;
-};
-
-type BasesTableConfig = {
-  description?: string;
-  fields: TableConfigField[];
-  name: string;
-};
-
-export type CreateBaseRequestBody = {
-  name: string;
-  tables: BasesTableConfig[];
-  workspaceId: string;
-};
-
-export type CreateBaseResponse = {
-  id: string;
-  tables: Table[];
-};

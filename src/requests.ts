@@ -2,7 +2,6 @@ import { request, RequestOptions } from 'https';
 import { IncomingMessage } from 'http';
 import { URL } from 'url';
 import { ApiRequest, RequestMethods } from './types/tables.js';
-import type { AirtableBaseSchema } from './types/metadata.js';
 import { delay } from './utils.js';
 
 export type AirtableQueryValue =
@@ -135,19 +134,91 @@ export function appendQueryToEndpoint(
   return `${endpoint}${endpoint.includes('?') ? '&' : '?'}${queryString}`;
 }
 
-function buildAirtableUrl({
+function buildAirtableApiUrl({
   apiURL,
-  baseId,
-  tableId,
-  endpoint,
+  path,
 }: {
   apiURL?: string;
-  baseId: string;
-  tableId: string;
-  endpoint: string;
+  path: string;
 }): string {
   const url = apiURL || 'https://api.airtable.com/v0';
-  return `${url}/${encodeURIComponent(baseId)}/${encodeURIComponent(tableId)}${endpoint}`;
+  return `${url}${path}`;
+}
+
+export async function airtableApiRequest<T>(request: {
+  apiKey: string;
+  path: string;
+  method: RequestMethods;
+  query?: Record<string, AirtableQueryValue>;
+  body?: object;
+  apiURL?: string;
+  requestContext?: {
+    method: string;
+    baseId?: string;
+    tableId?: string;
+    path?: string;
+  };
+}): Promise<T> {
+  const {
+    apiKey,
+    path,
+    method,
+    query,
+    body,
+    apiURL,
+    requestContext,
+  } = request;
+
+  if (!apiKey) {
+    throw new Error(
+      'API key is not set. Please provide a valid Airtable API key.'
+    );
+  }
+
+  if (!path.startsWith('/')) {
+    throw new Error('Airtable API paths must start with "/".');
+  }
+
+  const resolvedPath = appendQueryToEndpoint(path, query ?? {});
+  const context = requestContext ?? {
+    method,
+    path: resolvedPath,
+  };
+
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      const response = await apiRequest<T>({
+        url: buildAirtableApiUrl({
+          apiURL,
+          path: resolvedPath,
+        }),
+        apiKey,
+        method,
+        body,
+      });
+      validateResponse(response, context);
+
+      return response.data;
+    } catch (error) {
+      if (shouldRetryError(error, attempt)) {
+        await delay(getRetryDelayMs(error, attempt));
+        continue;
+      }
+
+      if (error instanceof Error && isRetryableNetworkError(error) && attempt < 5) {
+        const retryableError = new AirtableApiError({
+          message: error.message,
+          retryable: true,
+          request: context,
+          cause: error,
+        });
+        await delay(getRetryDelayMs(retryableError, attempt));
+        continue;
+      }
+
+      throw error;
+    }
+  }
 }
 
 export async function airtableRequest<T>(request: {
@@ -161,11 +232,6 @@ export async function airtableRequest<T>(request: {
 }): Promise<T> {
   const { apiKey, baseId, tableId, endpoint, method, body, apiURL } = request;
 
-  if (!apiKey) {
-    throw new Error(
-      'API key is not set. Please provide a valid Airtable API key.'
-    );
-  }
   if (!baseId) {
     throw new Error(
       'Base ID is not set. Please provide a valid Airtable base ID.'
@@ -177,49 +243,19 @@ export async function airtableRequest<T>(request: {
     );
   }
 
-  const requestContext = {
+  return airtableApiRequest<T>({
+    apiKey,
     method,
-    baseId,
-    tableId,
-    path: endpoint,
-  };
-
-  for (let attempt = 0; ; attempt += 1) {
-    try {
-      const response = await apiRequest<T>({
-        url: buildAirtableUrl({
-          apiURL,
-          baseId,
-          tableId,
-          endpoint,
-        }),
-        apiKey,
-        method,
-        body,
-      });
-      validateResponse(response, requestContext);
-
-      return response.data;
-    } catch (error) {
-      if (shouldRetryError(error, attempt)) {
-        await delay(getRetryDelayMs(error, attempt));
-        continue;
-      }
-
-      if (error instanceof Error && isRetryableNetworkError(error) && attempt < 5) {
-        const retryableError = new AirtableApiError({
-          message: error.message,
-          retryable: true,
-          request: requestContext,
-          cause: error,
-        });
-        await delay(getRetryDelayMs(retryableError, attempt));
-        continue;
-      }
-
-      throw error;
-    }
-  }
+    body,
+    apiURL,
+    path: `/${encodeURIComponent(baseId)}/${encodeURIComponent(tableId)}${endpoint}`,
+    requestContext: {
+      method,
+      baseId,
+      tableId,
+      path: endpoint,
+    },
+  });
 }
 
 interface AirtableErrorResponse {
@@ -406,26 +442,3 @@ async function apiRequest<T>({
   });
 }
 
-export async function getBaseSchema({
-  apiKey,
-  baseId,
-}: {
-  apiKey: string;
-  baseId: string;
-}): Promise<AirtableBaseSchema> {
-  const response = await fetch(
-    `https://api.airtable.com/v0/meta/bases/${baseId}/tables`,
-    {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-      },
-    }
-  );
-
-  if (!response.ok) {
-    throw new Error(`Error fetching base schema: ${response.statusText}`);
-  }
-
-  return response.json();
-}

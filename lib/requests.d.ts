@@ -1,5 +1,4 @@
 import { RequestMethods } from './types/tables.js';
-import type { AirtableBaseSchema } from './types/metadata.js';
 export type AirtableQueryValue = string | number | boolean | Array<string | number | boolean> | undefined;
 export declare class AirtableApiError extends Error {
     statusCode?: number;
@@ -30,6 +29,20 @@ export declare class AirtableApiError extends Error {
 }
 export declare function buildQueryString(query: Record<string, AirtableQueryValue>): string;
 export declare function appendQueryToEndpoint(endpoint: string, query: Record<string, AirtableQueryValue>): string;
+export declare function airtableApiRequest<T>(request: {
+    apiKey: string;
+    path: string;
+    method: RequestMethods;
+    query?: Record<string, AirtableQueryValue>;
+    body?: object;
+    apiURL?: string;
+    requestContext?: {
+        method: string;
+        baseId?: string;
+        tableId?: string;
+        path?: string;
+    };
+}): Promise<T>;
 export declare function airtableRequest<T>(request: {
     apiKey: string;
     baseId: string;
@@ -39,7 +52,3 @@ export declare function airtableRequest<T>(request: {
     body?: object;
     apiURL?: string;
 }): Promise<T>;
-export declare function getBaseSchema({ apiKey, baseId, }: {
-    apiKey: string;
-    baseId: string;
-}): Promise<AirtableBaseSchema>;
