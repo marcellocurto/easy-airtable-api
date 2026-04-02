@@ -21,7 +21,8 @@
   "scripts": {
     "watch": "tsc --watch",
     "build": "rm -r ./lib && tsc",
-    "publish": "npm publish",
+    "prepublishOnly": "npm test && npm run build",
+    "release": "npm run prepublishOnly && npm pack && npm publish --ignore-scripts",
     "lint": "eslint 'src/**/*.{ts,tsx}'",
     "test": "npm run test:all",
     "test:codegen": "vitest run tests/codegen.test.ts",
