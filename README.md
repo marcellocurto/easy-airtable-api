@@ -189,6 +189,42 @@ await generateAirtableTypes({
 });
 ```
 
+### Generated type assumptions
+
+Generated read types target Airtable's default JSON response mode:
+
+- `cellFormat: 'json'`
+- `returnFieldsByFieldId: false`
+
+If you switch to `cellFormat: 'string'` or `returnFieldsByFieldId: true`, the response shape is no longer compatible with field-name-keyed generated interfaces. The read helpers now include type-level guardrails for this path, and incompatible calls fall back to untyped field maps unless you stay on the default JSON mode.
+
+### Shared field/value types
+
+Generated files import shared canonical field/value types from the package root instead of emitting duplicate local interfaces. You can import the same types in application code:
+
+```ts
+import type {
+  AICell,
+  Attachment,
+  AttachmentWrite,
+  BarcodeCell,
+  BarcodeWrite,
+  ButtonCell,
+  Collaborator,
+  CollaboratorWrite,
+} from 'easy-airtable-api';
+```
+
+Examples:
+
+- `aiText` read values use `AICell`
+- attachment reads use `Attachment[]`, writes use `AttachmentWrite[]`
+- collaborator reads use `Collaborator` / `Collaborator[]`, writes use `CollaboratorWrite` / `CollaboratorWrite[]`
+- barcode reads use `BarcodeCell`, writes use `BarcodeWrite`
+- button fields are readonly and use `ButtonCell`
+
+These shared types make generated output and application code agree on one canonical public surface. They do not, by themselves, guarantee that every structured write shape has been exhaustively live-verified against Airtable in every edge case.
+
 ## Metadata/base APIs
 
 ### List accessible bases
@@ -478,6 +514,12 @@ import {
   generateAirtableTypes,
 } from 'easy-airtable-api/codegen';
 ```
+
+## Testing
+
+Codegen coverage lives in focused fixtures under `tests/fixtures/` and runs as part of the normal Vitest suite.
+
+The fixture matrix also includes compile checks for generated output and type-level guardrail tests for response modes that are incompatible with field-name-keyed generated types.
 
 ## Changelog
 

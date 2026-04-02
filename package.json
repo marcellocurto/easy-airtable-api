@@ -1,6 +1,6 @@
 {
   "name": "easy-airtable-api",
-  "version": "0.0.17",
+  "version": "0.1.0",
   "type": "module",
   "description": "Lightweight TypeScript-first Airtable client with metadata-based type generation.",
   "main": "lib/index.js",
@@ -21,7 +21,8 @@
   "scripts": {
     "watch": "tsc --watch",
     "build": "rm -r ./lib && tsc",
-    "publish": "npm publish",
+    "prepublishOnly": "npm test && npm run build",
+    "release": "npm run prepublishOnly && npm pack && npm publish --ignore-scripts",
     "lint": "eslint 'src/**/*.{ts,tsx}'",
     "test": "npm run test:all",
     "test:codegen": "vitest run tests/codegen.test.ts",

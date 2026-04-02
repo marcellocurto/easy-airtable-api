@@ -6,6 +6,20 @@ import type {
 } from './types.js';
 import { getChoices, getRecordValue, stringifyUnion } from './utils.js';
 
+type CollectionKind = 'scalar' | 'array';
+
+type MappedFieldType = {
+  type: string;
+  warning?: string;
+  collection: CollectionKind;
+};
+
+const FIELD_TYPE_ALIASES: Record<string, string> = {
+  attachment: 'multipleAttachments',
+  linkToAnotherRecord: 'multipleRecordLinks',
+  multipleLookupValues: 'lookup',
+};
+
 const READONLY_FIELD_TYPES = new Set([
   'aiText',
   'autoNumber',
@@ -32,11 +46,15 @@ const COMPUTED_FIELD_TYPES = new Set([
   'syncSource',
 ]);
 
+function canonicalizeFieldType(type: string): string {
+  return FIELD_TYPE_ALIASES[type] ?? type;
+}
+
 function resolveUnknown(
   field: AirtableFieldSchema,
   unknownFieldBehavior: UnknownFieldBehavior,
   reason?: string
-): { type: string; warning?: string } {
+): MappedFieldType {
   const warning = reason
     ? `${field.name}: ${reason}`
     : `${field.name}: unsupported Airtable field type ${field.type}`;
@@ -45,18 +63,23 @@ function resolveUnknown(
     throw new Error(warning);
   }
 
-  return { type: 'unknown', warning };
+  return {
+    type: 'unknown',
+    warning,
+    collection: 'scalar',
+  };
 }
 
 function resolveUnknownArray(
   field: AirtableFieldSchema,
   unknownFieldBehavior: UnknownFieldBehavior,
   reason?: string
-): { type: string; warning?: string } {
+): MappedFieldType {
   const resolved = resolveUnknown(field, unknownFieldBehavior, reason);
   return {
     type: 'unknown[]',
     warning: resolved.warning,
+    collection: 'array',
   };
 }
 
@@ -79,10 +102,14 @@ function mapResultDescriptor(
   field: AirtableFieldSchema,
   enumMode: EnumMode,
   unknownFieldBehavior: UnknownFieldBehavior
-): { type: string; warning?: string } {
+): MappedFieldType {
   const resultType = getRecordValue<string>(descriptor, 'type');
   if (!resultType) {
-    return resolveUnknown(field, unknownFieldBehavior, 'metadata result type is missing');
+    return resolveUnknown(
+      field,
+      unknownFieldBehavior,
+      'metadata result type is missing'
+    );
   }
 
   const nestedField: AirtableFieldSchema = {
@@ -107,19 +134,22 @@ export function mapFieldTypes({
   enumMode: EnumMode;
   unknownFieldBehavior: UnknownFieldBehavior;
 }): {
-  read: { type: string; warning?: string };
-  create?: { type: string; warning?: string };
-  update?: { type: string; warning?: string };
+  read: MappedFieldType;
+  create?: MappedFieldType;
+  update?: MappedFieldType;
   readonly: boolean;
   computed: boolean;
   linkedTableId?: string;
   enumTypeAlias?: string;
 } {
-  const readonly = READONLY_FIELD_TYPES.has(field.type);
-  const computed = COMPUTED_FIELD_TYPES.has(field.type);
-  const linkedTableId = getRecordValue<string>(field.options, 'linkedTableId');
+  const canonicalType = canonicalizeFieldType(field.type);
+  const normalizedField =
+    canonicalType === field.type ? field : { ...field, type: canonicalType };
+  const readonly = READONLY_FIELD_TYPES.has(canonicalType);
+  const computed = COMPUTED_FIELD_TYPES.has(canonicalType);
+  const linkedTableId = getRecordValue<string>(normalizedField.options, 'linkedTableId');
 
-  switch (field.type) {
+  switch (canonicalType) {
     case 'singleLineText':
     case 'multilineText':
     case 'richText':
@@ -129,15 +159,15 @@ export function mapFieldTypes({
     case 'date':
     case 'dateTime':
       return {
-        read: { type: 'string' },
-        create: { type: 'string' },
-        update: { type: 'string' },
+        read: { type: 'string', collection: 'scalar' },
+        create: { type: 'string', collection: 'scalar' },
+        update: { type: 'string', collection: 'scalar' },
         readonly,
         computed,
       };
     case 'aiText':
       return {
-        read: { type: 'string' },
+        read: { type: 'AICell', collection: 'scalar' },
         readonly,
         computed,
       };
@@ -147,116 +177,114 @@ export function mapFieldTypes({
     case 'rating':
     case 'duration':
       return {
-        read: { type: 'number' },
-        create: { type: 'number' },
-        update: { type: 'number' },
+        read: { type: 'number', collection: 'scalar' },
+        create: { type: 'number', collection: 'scalar' },
+        update: { type: 'number', collection: 'scalar' },
         readonly,
         computed,
       };
     case 'checkbox':
       return {
-        read: { type: 'boolean' },
-        create: { type: 'boolean' },
-        update: { type: 'boolean' },
+        read: { type: 'boolean', collection: 'scalar' },
+        create: { type: 'boolean', collection: 'scalar' },
+        update: { type: 'boolean', collection: 'scalar' },
         readonly,
         computed,
       };
     case 'singleSelect': {
-      const enumType = buildEnumType(field, enumMode) ?? 'string';
+      const enumType = buildEnumType(normalizedField, enumMode) ?? 'string';
       return {
-        read: { type: enumType },
-        create: { type: enumType },
-        update: { type: enumType },
+        read: { type: enumType, collection: 'scalar' },
+        create: { type: enumType, collection: 'scalar' },
+        update: { type: enumType, collection: 'scalar' },
         readonly,
         computed,
         enumTypeAlias: enumType,
       };
     }
     case 'multipleSelects': {
-      const enumType = buildEnumType(field, enumMode) ?? 'string';
+      const enumType = buildEnumType(normalizedField, enumMode) ?? 'string';
       return {
-        read: { type: `Array<${enumType}>` },
-        create: { type: `Array<${enumType}>` },
-        update: { type: `Array<${enumType}>` },
+        read: { type: `Array<${enumType}>`, collection: 'array' },
+        create: { type: `Array<${enumType}>`, collection: 'array' },
+        update: { type: `Array<${enumType}>`, collection: 'array' },
         readonly,
         computed,
         enumTypeAlias: enumType,
       };
     }
     case 'multipleAttachments':
-    case 'attachment':
       return {
-        read: { type: 'Attachment[]' },
-        create: { type: 'AttachmentWrite[]' },
-        update: { type: 'AttachmentWrite[]' },
+        read: { type: 'Attachment[]', collection: 'array' },
+        create: { type: 'AttachmentWrite[]', collection: 'array' },
+        update: { type: 'AttachmentWrite[]', collection: 'array' },
         readonly,
         computed,
       };
     case 'singleCollaborator':
       return {
-        read: { type: 'Collaborator' },
-        create: { type: 'Collaborator' },
-        update: { type: 'Collaborator' },
+        read: { type: 'Collaborator', collection: 'scalar' },
+        create: { type: 'CollaboratorWrite', collection: 'scalar' },
+        update: { type: 'CollaboratorWrite', collection: 'scalar' },
         readonly,
         computed,
       };
     case 'multipleCollaborators':
       return {
-        read: { type: 'Collaborator[]' },
-        create: { type: 'Collaborator[]' },
-        update: { type: 'Collaborator[]' },
+        read: { type: 'Collaborator[]', collection: 'array' },
+        create: { type: 'CollaboratorWrite[]', collection: 'array' },
+        update: { type: 'CollaboratorWrite[]', collection: 'array' },
         readonly,
         computed,
       };
     case 'multipleRecordLinks':
-    case 'linkToAnotherRecord':
       return {
-        read: { type: 'string[]' },
-        create: { type: 'string[]' },
-        update: { type: 'string[]' },
+        read: { type: 'string[]', collection: 'array' },
+        create: { type: 'string[]', collection: 'array' },
+        update: { type: 'string[]', collection: 'array' },
         readonly,
         computed,
         linkedTableId,
       };
     case 'barcode':
       return {
-        read: { type: 'Barcode' },
-        create: { type: 'Barcode' },
-        update: { type: 'Barcode' },
+        read: { type: 'BarcodeCell', collection: 'scalar' },
+        create: { type: 'BarcodeWrite', collection: 'scalar' },
+        update: { type: 'BarcodeWrite', collection: 'scalar' },
         readonly,
         computed,
       };
     case 'createdTime':
     case 'lastModifiedTime':
       return {
-        read: { type: 'string' },
+        read: { type: 'string', collection: 'scalar' },
         readonly,
         computed,
       };
     case 'createdBy':
     case 'lastModifiedBy':
       return {
-        read: { type: 'Collaborator' },
+        read: { type: 'Collaborator', collection: 'scalar' },
         readonly,
         computed,
       };
     case 'button':
       return {
-        read: { type: 'ButtonFieldValue' },
+        read: { type: 'ButtonCell', collection: 'scalar' },
         readonly,
         computed,
       };
     case 'count':
     case 'autoNumber':
       return {
-        read: { type: 'number' },
+        read: { type: 'number', collection: 'scalar' },
         readonly,
         computed,
       };
     case 'formula': {
       const result = mapResultDescriptor(
-        getRecordValue(field.options, 'result'),
-        field,
+        getRecordValue(normalizedField.options, 'result'),
+        normalizedField,
         enumMode,
         unknownFieldBehavior
       );
@@ -267,10 +295,14 @@ export function mapFieldTypes({
       };
     }
     case 'rollup': {
-      const result = getRecordValue(field.options, 'result');
+      const result = getRecordValue(normalizedField.options, 'result');
       const mapped = result
-        ? mapResultDescriptor(result, field, enumMode, unknownFieldBehavior)
-        : resolveUnknown(field, unknownFieldBehavior, 'rollup result metadata is missing');
+        ? mapResultDescriptor(result, normalizedField, enumMode, unknownFieldBehavior)
+        : resolveUnknown(
+            normalizedField,
+            unknownFieldBehavior,
+            'rollup result metadata is missing'
+          );
 
       return {
         read: mapped,
@@ -279,22 +311,30 @@ export function mapFieldTypes({
       };
     }
     case 'lookup': {
-      const result = getRecordValue(field.options, 'result');
+      const result = getRecordValue(normalizedField.options, 'result');
       const mapped = result
-        ? mapResultDescriptor(result, field, enumMode, unknownFieldBehavior)
-        : resolveUnknownArray(field, unknownFieldBehavior, 'lookup result metadata is missing');
+        ? mapResultDescriptor(result, normalizedField, enumMode, unknownFieldBehavior)
+        : resolveUnknownArray(
+            normalizedField,
+            unknownFieldBehavior,
+            'lookup result metadata is missing'
+          );
 
       return {
         read:
-          mapped.type === 'unknown'
-            ? { ...mapped, type: 'unknown[]' }
-            : { ...mapped, type: `Array<${mapped.type}>` },
+          mapped.collection === 'array'
+            ? mapped
+            : {
+                ...mapped,
+                type: mapped.type === 'unknown' ? 'unknown[]' : `Array<${mapped.type}>`,
+                collection: 'array',
+              },
         readonly,
         computed,
       };
     }
     default: {
-      const unknown = resolveUnknown(field, unknownFieldBehavior);
+      const unknown = resolveUnknown(normalizedField, unknownFieldBehavior);
       return {
         read: unknown,
         create: readonly ? undefined : unknown,
@@ -311,12 +351,14 @@ export function mapFieldToNormalizedField({
   enumMode,
   unknownFieldBehavior,
   tsKey,
+  tsConstKey,
   tsTypeName,
 }: {
   field: AirtableFieldSchema;
   enumMode: EnumMode;
   unknownFieldBehavior: UnknownFieldBehavior;
   tsKey: string;
+  tsConstKey: string;
   tsTypeName: string;
 }): NormalizedField {
   const mapped = mapFieldTypes({
@@ -335,6 +377,7 @@ export function mapFieldToNormalizedField({
     id: field.id,
     name: field.name,
     tsKey,
+    tsConstKey,
     tsTypeName,
     airtableType: field.type,
     readonly: mapped.readonly,

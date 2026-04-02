@@ -1,12 +1,17 @@
 const NON_IDENTIFIER = /[^a-zA-Z0-9_$]+/g;
 const MULTIPLE_UNDERSCORES = /_+/g;
+const COMBINING_MARKS = /[\u0300-\u036f]/g;
+
+function normalizeIdentifierInput(value: string): string {
+  return value.normalize('NFKD').replace(COMBINING_MARKS, '');
+}
 
 function suffixFromId(id: string): string {
   return id.replace(/[^a-zA-Z0-9]/g, '').slice(-6) || 'Id';
 }
 
 export function toPascalCase(value: string): string {
-  const normalized = value
+  const normalized = normalizeIdentifierInput(value)
     .replace(NON_IDENTIFIER, ' ')
     .trim()
     .split(/\s+/)
@@ -20,7 +25,7 @@ export function toPascalCase(value: string): string {
 }
 
 export function toSafeConstKey(value: string): string {
-  const normalized = value
+  const normalized = normalizeIdentifierInput(value)
     .replace(NON_IDENTIFIER, '_')
     .replace(MULTIPLE_UNDERSCORES, '_')
     .replace(/^_+|_+$/g, '');
@@ -44,6 +49,31 @@ export function makeUniquePascalNames<T extends { id: string; name: string }>(
 
   items.forEach((item) => {
     const base = toPascalCase(item.name);
+    if ((counts.get(base) ?? 0) === 1) {
+      result.set(item.id, base);
+      return;
+    }
+
+    result.set(item.id, `${base}_${suffixFromId(item.id)}`);
+  });
+
+  return result;
+}
+
+export function makeUniqueConstKeys<T extends { id: string; name: string }>(
+  items: T[]
+): Map<string, string> {
+  const result = new Map<string, string>();
+  const counts = new Map<string, number>();
+
+  items.forEach((item) => {
+    const base = toSafeConstKey(item.name);
+    const count = counts.get(base) ?? 0;
+    counts.set(base, count + 1);
+  });
+
+  items.forEach((item) => {
+    const base = toSafeConstKey(item.name);
     if ((counts.get(base) ?? 0) === 1) {
       result.set(item.id, base);
       return;

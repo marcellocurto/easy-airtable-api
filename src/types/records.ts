@@ -34,6 +34,14 @@ export interface GetRecordsQueryParameters {
   requestInterval?: number;
 }
 
+export type GeneratedRecordFieldsCompatibleGetRecordsOptions = Omit<
+  GetRecordsQueryParameters,
+  'cellFormat' | 'returnFieldsByFieldId'
+> & {
+  cellFormat?: 'json';
+  returnFieldsByFieldId?: false;
+};
+
 type RecordField = {
   [key: string]: unknown;
 };
@@ -53,6 +61,14 @@ export interface GetRecordQueryParameters {
   cellFormat?: CellFormat;
   returnFieldsByFieldId?: boolean;
 }
+
+export type GeneratedRecordFieldsCompatibleGetRecordOptions = Omit<
+  GetRecordQueryParameters,
+  'cellFormat' | 'returnFieldsByFieldId'
+> & {
+  cellFormat?: 'json';
+  returnFieldsByFieldId?: false;
+};
 
 export interface GetRecordPathParameters {
   baseId: BaseId;

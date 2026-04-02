@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.0
+
+- Exported a broader canonical public field/value type surface, including shared types used by generated code such as `AICell`, `BarcodeCell`, `BarcodeWrite`, `ButtonCell`, and `CollaboratorWrite`.
+- Improved code generation to normalize legacy Airtable metadata variants, normalize Unicode identifiers, and emit collision-safe table/field constants and interface properties.
+- Fixed generated typing for `aiText`, lookup/rollup nested collection results, duplicate field names, and response-mode guardrails for field-name-keyed generated record types.
+- Expanded codegen fixture coverage and compile/type-level tests for aliases, Unicode, collisions, generated output safety, and response-mode compatibility.
+
 ## 0.0.17
 
 - Reworked Airtable type generation around the new `easy-airtable-api/codegen` workflow.

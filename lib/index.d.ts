@@ -2,7 +2,7 @@ export { getRecord, getRecordsPage, iterateRecordsPages, getRecords, createRecor
 export { listBases, createBase, getBaseSchema } from './bases.js';
 export { airtableRequestRaw, AirtableApiError } from './requests.js';
 export type { AirtableRetryOptions } from './requests.js';
-export type { AirtableRecord } from './types/records.js';
+export type { AirtableRecord, GeneratedRecordFieldsCompatibleGetRecordOptions, GeneratedRecordFieldsCompatibleGetRecordsOptions, } from './types/records.js';
 export type { CreateBaseFieldConfig, CreateBaseRequestBody, CreateBaseResponse, CreateBaseTableConfig, ListBasesResponse, } from './types/bases.js';
 export type { AirtableBaseSchema, AirtableFieldSchema, AirtableTableSchema, AirtableViewSchema, } from './types/metadata.js';
-export type { Attachment, AttachmentWrite, Collaborator, } from './types/fields.js';
+export type { AICell, Attachment, AttachmentWrite, Barcode, BarcodeCell, BarcodeWrite, ButtonCell, ButtonFieldValue, Collaborator, CollaboratorWrite, } from './types/fields.js';
