@@ -188,6 +188,39 @@ await generateAirtableTypes({
 });
 ```
 
+## Metadata/base APIs
+
+### List accessible bases
+
+```ts
+import { listBases } from 'easy-airtable-api';
+
+const result = await listBases({
+  apiKey: process.env.AIRTABLE_ACCESS_TOKEN!,
+});
+
+for (const base of result.bases) {
+  console.log(base.id, base.name, base.permissionLevel);
+}
+```
+
+### Fetch a base schema directly
+
+```ts
+import { getBaseSchema } from 'easy-airtable-api';
+
+const schema = await getBaseSchema({
+  apiKey: process.env.AIRTABLE_ACCESS_TOKEN!,
+  baseId: process.env.AIRTABLE_BASE_ID!,
+});
+
+console.log(schema.tables.map((table) => table.name));
+```
+
+This is the same metadata path used by the code generator when `source` includes a `baseId` and token.
+
+Base creation is intentionally not exposed yet. See issue `#30` for verification work before shipping a public `createBase()` API.
+
 ## Runtime examples
 
 ### Get a single record
@@ -350,10 +383,12 @@ import {
   createRecords,
   deleteRecord,
   deleteRecords,
+  getBaseSchema,
   getRecord,
   getRecords,
   getRecordsPage,
   iterateRecordsPages,
+  listBases,
   replaceRecord,
   replaceRecords,
   updateRecord,
