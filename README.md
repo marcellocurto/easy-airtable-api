@@ -201,7 +201,44 @@ const record = await getRecord<ProjectsRecordFields>({
   baseId: process.env.AIRTABLE_BASE_ID!,
   tableId: process.env.AIRTABLE_PROJECTS_TABLE_ID!,
   recordId: 'rec123',
+  options: {
+    returnFieldsByFieldId: false,
+  },
 });
+```
+
+### Get one page of records
+
+```ts
+import { getRecordsPage } from 'easy-airtable-api';
+import type { ProjectsRecordFields } from './airtable.generated';
+
+const page = await getRecordsPage<ProjectsRecordFields>({
+  apiKey: process.env.AIRTABLE_ACCESS_TOKEN!,
+  baseId: process.env.AIRTABLE_BASE_ID!,
+  tableId: process.env.AIRTABLE_PROJECTS_TABLE_ID!,
+  options: {
+    pageSize: 25,
+  },
+});
+```
+
+### Iterate through record pages
+
+```ts
+import { iterateRecordsPages } from 'easy-airtable-api';
+import type { ProjectsRecordFields } from './airtable.generated';
+
+for await (const page of iterateRecordsPages<ProjectsRecordFields>({
+  apiKey: process.env.AIRTABLE_ACCESS_TOKEN!,
+  baseId: process.env.AIRTABLE_BASE_ID!,
+  tableId: process.env.AIRTABLE_PROJECTS_TABLE_ID!,
+  options: {
+    pageSize: 100,
+  },
+})) {
+  console.log(page.records.length, page.offset);
+}
 ```
 
 ### Create multiple records
@@ -234,6 +271,24 @@ const result = await createRecords<ProjectsCreateFields>({
 });
 ```
 
+### Replace a single record
+
+```ts
+import { replaceRecord } from 'easy-airtable-api';
+import type { ProjectsCreateFields } from './airtable.generated';
+
+const result = await replaceRecord<ProjectsCreateFields>({
+  apiKey: process.env.AIRTABLE_ACCESS_TOKEN!,
+  baseId: process.env.AIRTABLE_BASE_ID!,
+  tableId: process.env.AIRTABLE_PROJECTS_TABLE_ID!,
+  recordId: 'rec123',
+  fields: {
+    Name: 'Project A',
+    Status: 'Done',
+  },
+});
+```
+
 ### Upsert records
 
 ```ts
@@ -259,6 +314,19 @@ const result = await updateRecordsUpsert<ProjectsCreateFields>({
 });
 ```
 
+### Delete a single record
+
+```ts
+import { deleteRecord } from 'easy-airtable-api';
+
+await deleteRecord({
+  apiKey: process.env.AIRTABLE_ACCESS_TOKEN!,
+  baseId: process.env.AIRTABLE_BASE_ID!,
+  tableId: process.env.AIRTABLE_PROJECTS_TABLE_ID!,
+  recordId: 'rec123',
+});
+```
+
 ### Delete records
 
 ```ts
@@ -280,9 +348,14 @@ Runtime package:
 import {
   createRecord,
   createRecords,
+  deleteRecord,
   deleteRecords,
   getRecord,
   getRecords,
+  getRecordsPage,
+  iterateRecordsPages,
+  replaceRecord,
+  replaceRecords,
   updateRecord,
   updateRecords,
   updateRecordsUpsert,
