@@ -1,22 +1,25 @@
 import { RequestMethods } from './types/tables.js';
 import type { AirtableBaseSchema } from './types/metadata.js';
+export type AirtableQueryValue = string | number | boolean | Array<string | number | boolean> | undefined;
 export declare class AirtableApiError extends Error {
     statusCode?: number;
     airtableType?: string;
     retryable: boolean;
     retryAfterMs?: number;
+    cause?: unknown;
     request?: {
         method: string;
         baseId?: string;
         tableId?: string;
         path?: string;
     };
-    constructor({ message, statusCode, airtableType, retryable, request, retryAfterMs, }: {
+    constructor({ message, statusCode, airtableType, retryable, request, retryAfterMs, cause, }: {
         message: string;
         statusCode?: number;
         airtableType?: string;
         retryable: boolean;
         retryAfterMs?: number;
+        cause?: unknown;
         request?: {
             method: string;
             baseId?: string;
@@ -25,6 +28,8 @@ export declare class AirtableApiError extends Error {
         };
     });
 }
+export declare function buildQueryString(query: Record<string, AirtableQueryValue>): string;
+export declare function appendQueryToEndpoint(endpoint: string, query: Record<string, AirtableQueryValue>): string;
 export declare function airtableRequest<T>(request: {
     apiKey: string;
     baseId: string;

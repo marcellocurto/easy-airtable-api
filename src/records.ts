@@ -5,7 +5,7 @@ import {
   GetRecordQueryParameters,
   GetRecordsQueryParameters,
 } from './types/records.js';
-import { airtableRequest } from './requests.js';
+import { appendQueryToEndpoint, airtableRequest } from './requests.js';
 import { delay } from './utils.js';
 
 export async function getRecord<Fields>({
@@ -21,20 +21,10 @@ export async function getRecord<Fields>({
   recordId: string;
   options?: GetRecordQueryParameters;
 }): Promise<AirtableRecord<Fields>> {
-  const query = new URLSearchParams();
-
-  if (options?.cellFormat) {
-    query.set('cellFormat', options.cellFormat);
-  }
-
-  if (options?.returnFieldsByFieldId !== undefined) {
-    query.set(
-      'returnFieldsByFieldId',
-      String(options.returnFieldsByFieldId)
-    );
-  }
-
-  const endpoint = query.size ? `/${recordId}?${query.toString()}` : `/${recordId}`;
+  const endpoint = appendQueryToEndpoint(`/${recordId}`, {
+    cellFormat: options?.cellFormat,
+    returnFieldsByFieldId: options?.returnFieldsByFieldId,
+  });
 
   return await airtableRequest<AirtableRecord<Fields>>({
     apiKey,
@@ -470,16 +460,13 @@ export async function deleteRecords({
   let combinedResults: DeleteRecordResponse[] = [];
 
   for (const chunk of chunks) {
-    const params = new URLSearchParams();
-    chunk.forEach((id) => {
-      params.append('records[]', id);
-    });
-
     const result = await airtableRequest<DeleteRecordsResponse>({
       apiKey,
       baseId,
       tableId,
-      endpoint: `?${params.toString()}`,
+      endpoint: appendQueryToEndpoint('', {
+        'records[]': chunk,
+      }),
       method: 'DELETE',
     });
 

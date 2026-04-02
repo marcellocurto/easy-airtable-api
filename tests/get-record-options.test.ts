@@ -1,8 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('../src/requests.js', () => ({
-  airtableRequest: vi.fn(),
-}));
+vi.mock('../src/requests.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../src/requests.js')>();
+  return {
+    ...actual,
+    airtableRequest: vi.fn(),
+  };
+});
 
 import { getRecord } from '../src/index.js';
 import { airtableRequest } from '../src/requests.js';

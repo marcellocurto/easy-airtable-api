@@ -5,11 +5,19 @@ import { ApiRequest, RequestMethods } from './types/tables.js';
 import type { AirtableBaseSchema } from './types/metadata.js';
 import { delay } from './utils.js';
 
+export type AirtableQueryValue =
+  | string
+  | number
+  | boolean
+  | Array<string | number | boolean>
+  | undefined;
+
 export class AirtableApiError extends Error {
   statusCode?: number;
   airtableType?: string;
   retryable: boolean;
   retryAfterMs?: number;
+  cause?: unknown;
   request?: {
     method: string;
     baseId?: string;
@@ -24,12 +32,14 @@ export class AirtableApiError extends Error {
     retryable,
     request,
     retryAfterMs,
+    cause,
   }: {
     message: string;
     statusCode?: number;
     airtableType?: string;
     retryable: boolean;
     retryAfterMs?: number;
+    cause?: unknown;
     request?: {
       method: string;
       baseId?: string;
@@ -43,6 +53,7 @@ export class AirtableApiError extends Error {
     this.airtableType = airtableType;
     this.retryable = retryable;
     this.retryAfterMs = retryAfterMs;
+    this.cause = cause;
     this.request = request;
   }
 }
@@ -53,6 +64,19 @@ function shouldRetryError(
 ): error is AirtableApiError {
   return (
     error instanceof AirtableApiError && error.retryable && attempt < 5
+  );
+}
+
+function isRetryableNetworkError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+
+  const message = error.message.toLowerCase();
+  return (
+    message.includes('socket hang up') ||
+    message.includes('timed out') ||
+    message.includes('econnreset') ||
+    message.includes('econnrefused') ||
+    message.includes('network')
   );
 }
 
@@ -80,6 +104,52 @@ function parseRetryAfterMs(value: string | string[] | undefined): number | undef
   return Math.max(retryAt - Date.now(), 0);
 }
 
+export function buildQueryString(
+  query: Record<string, AirtableQueryValue>
+): string {
+  const params = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(query)) {
+    if (value === undefined) continue;
+
+    if (Array.isArray(value)) {
+      value.forEach((entry) => {
+        params.append(key, String(entry));
+      });
+      continue;
+    }
+
+    params.append(key, String(value));
+  }
+
+  return params.toString();
+}
+
+export function appendQueryToEndpoint(
+  endpoint: string,
+  query: Record<string, AirtableQueryValue>
+): string {
+  const queryString = buildQueryString(query);
+  if (!queryString) return endpoint;
+
+  return `${endpoint}${endpoint.includes('?') ? '&' : '?'}${queryString}`;
+}
+
+function buildAirtableUrl({
+  apiURL,
+  baseId,
+  tableId,
+  endpoint,
+}: {
+  apiURL?: string;
+  baseId: string;
+  tableId: string;
+  endpoint: string;
+}): string {
+  const url = apiURL || 'https://api.airtable.com/v0';
+  return `${url}/${encodeURIComponent(baseId)}/${encodeURIComponent(tableId)}${endpoint}`;
+}
+
 export async function airtableRequest<T>(request: {
   apiKey: string;
   baseId: string;
@@ -90,8 +160,6 @@ export async function airtableRequest<T>(request: {
   apiURL?: string;
 }): Promise<T> {
   const { apiKey, baseId, tableId, endpoint, method, body, apiURL } = request;
-
-  const url: string = apiURL || 'https://api.airtable.com/v0';
 
   if (!apiKey) {
     throw new Error(
@@ -119,7 +187,12 @@ export async function airtableRequest<T>(request: {
   for (let attempt = 0; ; attempt += 1) {
     try {
       const response = await apiRequest<T>({
-        url: `${url}/${encodeURIComponent(baseId)}/${encodeURIComponent(tableId)}${endpoint}`,
+        url: buildAirtableUrl({
+          apiURL,
+          baseId,
+          tableId,
+          endpoint,
+        }),
         apiKey,
         method,
         body,
@@ -128,11 +201,23 @@ export async function airtableRequest<T>(request: {
 
       return response.data;
     } catch (error) {
-      if (!shouldRetryError(error, attempt)) {
-        throw error;
+      if (shouldRetryError(error, attempt)) {
+        await delay(getRetryDelayMs(error, attempt));
+        continue;
       }
 
-      await delay(getRetryDelayMs(error, attempt));
+      if (error instanceof Error && isRetryableNetworkError(error) && attempt < 5) {
+        const retryableError = new AirtableApiError({
+          message: error.message,
+          retryable: true,
+          request: requestContext,
+          cause: error,
+        });
+        await delay(getRetryDelayMs(retryableError, attempt));
+        continue;
+      }
+
+      throw error;
     }
   }
 }
