@@ -1,6 +1,10 @@
 import { airtableApiRequest } from './requests.js';
 import type { AirtableRetryOptions } from './requests.js';
-import type { ListBasesResponse } from './types/bases.js';
+import type {
+  CreateBaseRequestBody,
+  CreateBaseResponse,
+  ListBasesResponse,
+} from './types/bases.js';
 import type { AirtableBaseSchema } from './types/metadata.js';
 
 export async function listBases({
@@ -18,6 +22,28 @@ export async function listBases({
     path: '/meta/bases',
     query: { offset },
     retry,
+  });
+}
+
+export async function createBase({
+  apiKey,
+  body,
+  retry,
+}: {
+  apiKey: string;
+  body: CreateBaseRequestBody;
+  retry?: AirtableRetryOptions;
+}): Promise<CreateBaseResponse> {
+  return airtableApiRequest<CreateBaseResponse>({
+    apiKey,
+    method: 'POST',
+    path: '/meta/bases',
+    body,
+    retry,
+    requestContext: {
+      method: 'POST',
+      path: '/meta/bases',
+    },
   });
 }
 

@@ -219,7 +219,36 @@ console.log(schema.tables.map((table) => table.name));
 
 This is the same metadata path used by the code generator when `source` includes a `baseId` and token.
 
-Base creation is intentionally not exposed yet. See issue `#30` for verification work before shipping a public `createBase()` API.
+### Create a base
+
+```ts
+import { createBase } from 'easy-airtable-api';
+
+const created = await createBase({
+  apiKey: process.env.AIRTABLE_ACCESS_TOKEN!,
+  body: {
+    workspaceId: process.env.AIRTABLE_WORKSPACE_ID!,
+    name: 'Apartment Hunting',
+    tables: [
+      {
+        name: 'Apartments',
+        fields: [
+          { name: 'Name', type: 'singleLineText' },
+          {
+            name: 'Visited',
+            type: 'checkbox',
+            options: { color: 'greenBright', icon: 'check' },
+          },
+        ],
+      },
+    ],
+  },
+});
+
+console.log(created.id);
+```
+
+Per Airtable's metadata API documentation, creating a base requires a token authorized for `schema.bases:write`, and the caller must be able to create bases in the target workspace (documented as workspace creator permissions).
 
 ## Raw Airtable request escape hatch
 
@@ -421,6 +450,7 @@ Runtime package:
 ```ts
 import {
   airtableRequestRaw,
+  createBase,
   createRecord,
   createRecords,
   deleteRecord,

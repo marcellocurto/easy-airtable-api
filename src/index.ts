@@ -14,11 +14,17 @@ export {
   deleteRecords,
 } from './records.js';
 
-export { listBases, getBaseSchema } from './bases.js';
+export { listBases, createBase, getBaseSchema } from './bases.js';
 export { airtableRequestRaw, AirtableApiError } from './requests.js';
 export type { AirtableRetryOptions } from './requests.js';
 export type { AirtableRecord } from './types/records.js';
-export type { ListBasesResponse } from './types/bases.js';
+export type {
+  CreateBaseFieldConfig,
+  CreateBaseRequestBody,
+  CreateBaseResponse,
+  CreateBaseTableConfig,
+  ListBasesResponse,
+} from './types/bases.js';
 export type {
   AirtableBaseSchema,
   AirtableFieldSchema,
