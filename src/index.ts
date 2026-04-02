@@ -14,6 +14,7 @@ export {
   deleteRecords,
 } from './records.js';
 
+export { AirtableApiError } from './requests.js';
 export type { AirtableRecord } from './types/records.js';
 export type {
   Attachment,

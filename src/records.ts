@@ -470,12 +470,16 @@ export async function deleteRecords({
   let combinedResults: DeleteRecordResponse[] = [];
 
   for (const chunk of chunks) {
-    const query = chunk.map((id) => `records[]=${id}`).join('&');
+    const params = new URLSearchParams();
+    chunk.forEach((id) => {
+      params.append('records[]', id);
+    });
+
     const result = await airtableRequest<DeleteRecordsResponse>({
       apiKey,
       baseId,
       tableId,
-      endpoint: `?${query}`,
+      endpoint: `?${params.toString()}`,
       method: 'DELETE',
     });
 

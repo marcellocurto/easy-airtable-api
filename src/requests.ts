@@ -3,6 +3,82 @@ import { IncomingMessage } from 'http';
 import { URL } from 'url';
 import { ApiRequest, RequestMethods } from './types/tables.js';
 import type { AirtableBaseSchema } from './types/metadata.js';
+import { delay } from './utils.js';
+
+export class AirtableApiError extends Error {
+  statusCode?: number;
+  airtableType?: string;
+  retryable: boolean;
+  retryAfterMs?: number;
+  request?: {
+    method: string;
+    baseId?: string;
+    tableId?: string;
+    path?: string;
+  };
+
+  constructor({
+    message,
+    statusCode,
+    airtableType,
+    retryable,
+    request,
+    retryAfterMs,
+  }: {
+    message: string;
+    statusCode?: number;
+    airtableType?: string;
+    retryable: boolean;
+    retryAfterMs?: number;
+    request?: {
+      method: string;
+      baseId?: string;
+      tableId?: string;
+      path?: string;
+    };
+  }) {
+    super(message);
+    this.name = 'AirtableApiError';
+    this.statusCode = statusCode;
+    this.airtableType = airtableType;
+    this.retryable = retryable;
+    this.retryAfterMs = retryAfterMs;
+    this.request = request;
+  }
+}
+
+function shouldRetryError(
+  error: unknown,
+  attempt: number
+): error is AirtableApiError {
+  return (
+    error instanceof AirtableApiError && error.retryable && attempt < 5
+  );
+}
+
+function getRetryDelayMs(error: AirtableApiError, attempt: number): number {
+  if (error.retryAfterMs !== undefined) {
+    return error.retryAfterMs;
+  }
+
+  const cappedDelay = Math.min(500 * 2 ** attempt, 8000);
+  return Math.round(Math.random() * cappedDelay);
+}
+
+function parseRetryAfterMs(value: string | string[] | undefined): number | undefined {
+  const rawValue = Array.isArray(value) ? value[0] : value;
+  if (!rawValue) return undefined;
+
+  const seconds = Number(rawValue);
+  if (!Number.isNaN(seconds) && seconds >= 0) {
+    return seconds * 1000;
+  }
+
+  const retryAt = Date.parse(rawValue);
+  if (Number.isNaN(retryAt)) return undefined;
+
+  return Math.max(retryAt - Date.now(), 0);
+}
 
 export async function airtableRequest<T>(request: {
   apiKey: string;
@@ -33,15 +109,32 @@ export async function airtableRequest<T>(request: {
     );
   }
 
-  const response = await apiRequest<T>({
-    url: `${url}/${baseId}/${tableId}${endpoint}`,
-    apiKey,
+  const requestContext = {
     method,
-    body,
-  });
-  validateResponse(response);
+    baseId,
+    tableId,
+    path: endpoint,
+  };
 
-  return response.data;
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      const response = await apiRequest<T>({
+        url: `${url}/${encodeURIComponent(baseId)}/${encodeURIComponent(tableId)}${endpoint}`,
+        apiKey,
+        method,
+        body,
+      });
+      validateResponse(response, requestContext);
+
+      return response.data;
+    } catch (error) {
+      if (!shouldRetryError(error, attempt)) {
+        throw error;
+      }
+
+      await delay(getRetryDelayMs(error, attempt));
+    }
+  }
 }
 
 interface AirtableErrorResponse {
@@ -51,9 +144,23 @@ interface AirtableErrorResponse {
   };
 }
 
-function validateResponse<T>(response: ApiResponse<T>) {
+function validateResponse<T>(
+  response: ApiResponse<T>,
+  requestContext: {
+    method: string;
+    baseId?: string;
+    tableId?: string;
+    path?: string;
+  }
+) {
   const statusCode = response.statusCode;
-  if (statusCode === 200) return;
+  const retryAfterMs = parseRetryAfterMs(response.headers?.['retry-after']);
+  if (
+    statusCode !== undefined &&
+    statusCode >= 200 &&
+    statusCode < 300
+  )
+    return;
 
   const isAirtableError = (data: unknown): data is AirtableErrorResponse => {
     return (
@@ -68,26 +175,94 @@ function validateResponse<T>(response: ApiResponse<T>) {
   };
 
   if (response.data && isAirtableError(response.data)) {
-    throw new Error(response.data.error.message);
+    throw new AirtableApiError({
+      message: response.data.error.message,
+      statusCode,
+      airtableType: response.data.error.type,
+      retryable: statusCode === 429 || statusCode === 500 || statusCode === 503,
+      request: requestContext,
+      retryAfterMs,
+    });
   }
 
-  if (statusCode === 401) throw new Error('Incorrect API Key.');
-  else if (statusCode === 403) throw new Error('Not authorized.');
-  else if (statusCode === 404) throw new Error('Table or record not found.');
-  else if (statusCode === 413) throw new Error('Request body is too large.');
+  if (statusCode === 401)
+    throw new AirtableApiError({
+      message: 'Incorrect API Key.',
+      statusCode,
+      retryable: false,
+      request: requestContext,
+      retryAfterMs,
+    });
+  else if (statusCode === 403)
+    throw new AirtableApiError({
+      message: 'Not authorized.',
+      statusCode,
+      retryable: false,
+      request: requestContext,
+      retryAfterMs,
+    });
+  else if (statusCode === 404)
+    throw new AirtableApiError({
+      message: 'Table or record not found.',
+      statusCode,
+      retryable: false,
+      request: requestContext,
+      retryAfterMs,
+    });
+  else if (statusCode === 413)
+    throw new AirtableApiError({
+      message: 'Request body is too large.',
+      statusCode,
+      retryable: false,
+      request: requestContext,
+      retryAfterMs,
+    });
   else if (statusCode === 422) {
-    throw new Error('Operation cannot be processed. Do the field names match?');
+    throw new AirtableApiError({
+      message: 'Operation cannot be processed. Do the field names match?',
+      statusCode,
+      retryable: false,
+      request: requestContext,
+      retryAfterMs,
+    });
   } else if (statusCode === 429) {
-    throw new Error('Too many requests to the Airtable server.');
-  } else if (statusCode === 500) throw new Error('Airtable server error.');
-  else if (statusCode === 503) throw new Error('Airtable service unavailable.');
-  throw new Error('Unexpected error.');
+    throw new AirtableApiError({
+      message: 'Too many requests to the Airtable server.',
+      statusCode,
+      retryable: true,
+      request: requestContext,
+      retryAfterMs,
+    });
+  } else if (statusCode === 500)
+    throw new AirtableApiError({
+      message: 'Airtable server error.',
+      statusCode,
+      retryable: true,
+      request: requestContext,
+      retryAfterMs,
+    });
+  else if (statusCode === 503)
+    throw new AirtableApiError({
+      message: 'Airtable service unavailable.',
+      statusCode,
+      retryable: true,
+      request: requestContext,
+      retryAfterMs,
+    });
+  throw new AirtableApiError({
+    message: 'Unexpected error.',
+    statusCode,
+    retryable: false,
+    request: requestContext,
+    retryAfterMs,
+  });
 }
 
 type ApiResponse<T> = {
   data: T;
   statusCode?: number;
   statusMessage?: string;
+  headers?: IncomingMessage['headers'];
 };
 
 async function apiRequest<T>({
@@ -124,6 +299,7 @@ async function apiRequest<T>({
             data: JSON.parse(data) as T,
             statusCode: res.statusCode,
             statusMessage: res.statusMessage,
+            headers: res.headers,
           });
         } catch (error) {
           reject(new Error(`Failed to parse response as JSON: ${data}`));
