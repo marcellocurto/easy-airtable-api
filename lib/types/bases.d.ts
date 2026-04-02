@@ -1,3 +1,4 @@
+import type { AirtableBaseSchema } from './metadata.js';
 type BaseList = {
     id: string;
     name: string;
@@ -7,57 +8,24 @@ export type ListBasesResponse = {
     bases: BaseList[];
     offset?: string;
 };
-type BasesFieldOptions = {
-    inverseLinkFieldId?: string;
-    isReversed?: boolean;
-    linkedTableId?: string;
-    prefersSingleRecordLink?: boolean;
-};
-type Field = {
-    description?: string;
-    id: string;
+export type CreateBaseFieldConfig = {
     name: string;
     type: string;
-    options?: BasesFieldOptions;
-};
-type TableView = {
-    id: string;
-    name: string;
-    type: string;
-};
-type Table = {
     description?: string;
-    fields: Field[];
-    id: string;
+    options?: Record<string, unknown>;
+};
+export type CreateBaseTableConfig = {
     name: string;
-    primaryFieldId: string;
-    views: TableView[];
-};
-export type GetBaseSchemaResponse = {
-    tables: Table[];
-};
-type TableConfigFieldOptions = {
-    color?: string;
-    icon?: string;
-};
-type TableConfigField = {
     description?: string;
-    name: string;
-    type: string;
-    options?: TableConfigFieldOptions;
-};
-type BasesTableConfig = {
-    description?: string;
-    fields: TableConfigField[];
-    name: string;
+    fields: CreateBaseFieldConfig[];
 };
 export type CreateBaseRequestBody = {
-    name: string;
-    tables: BasesTableConfig[];
     workspaceId: string;
+    name: string;
+    tables: CreateBaseTableConfig[];
 };
 export type CreateBaseResponse = {
     id: string;
-    tables: Table[];
+    tables: AirtableBaseSchema['tables'];
 };
 export {};

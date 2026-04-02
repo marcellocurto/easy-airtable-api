@@ -2,9 +2,11 @@ import {
   AirtableRecord,
   DeleteRecordResponse,
   DeleteRecordsResponse,
+  GetRecordQueryParameters,
   GetRecordsQueryParameters,
 } from './types/records.js';
-import { airtableRequest } from './requests.js';
+import { appendQueryToEndpoint, airtableRequest } from './requests.js';
+import type { AirtableRetryOptions } from './requests.js';
 import { delay } from './utils.js';
 
 export async function getRecord<Fields>({
@@ -12,19 +14,101 @@ export async function getRecord<Fields>({
   baseId,
   tableId,
   recordId,
+  options,
+  retry,
 }: {
   apiKey: string;
   baseId: string;
   tableId: string;
   recordId: string;
+  options?: GetRecordQueryParameters;
+  retry?: AirtableRetryOptions;
 }): Promise<AirtableRecord<Fields>> {
+  const endpoint = appendQueryToEndpoint(`/${recordId}`, {
+    cellFormat: options?.cellFormat,
+    returnFieldsByFieldId: options?.returnFieldsByFieldId,
+  });
+
   return await airtableRequest<AirtableRecord<Fields>>({
     apiKey,
     baseId,
     tableId,
-    endpoint: `/${recordId}`,
+    endpoint,
     method: 'GET',
+    retry,
   });
+}
+
+export async function getRecordsPage<Fields>({
+  apiKey,
+  baseId,
+  tableId,
+  options,
+  retry,
+}: {
+  apiKey: string;
+  baseId: string;
+  tableId: string;
+  options?: GetRecordsQueryParameters;
+  retry?: AirtableRetryOptions;
+}): Promise<{
+  records: AirtableRecord<Fields>[];
+  offset?: string;
+}> {
+  validateGetRecordsOptions(options);
+
+  return await airtableRequest<{
+    records: AirtableRecord<Fields>[];
+    offset?: string;
+  }>({
+    apiKey,
+    baseId,
+    tableId,
+    endpoint: '/listRecords',
+    method: 'POST',
+    body: options,
+    retry,
+  });
+}
+
+export async function* iterateRecordsPages<Fields>({
+  apiKey,
+  baseId,
+  tableId,
+  options,
+  retry,
+}: {
+  apiKey: string;
+  baseId: string;
+  tableId: string;
+  options?: GetRecordsQueryParameters;
+  retry?: AirtableRetryOptions;
+}): AsyncGenerator<{
+  records: AirtableRecord<Fields>[];
+  offset?: string;
+}> {
+  let currentOffset: string | undefined;
+
+  do {
+    const requestBody = currentOffset
+      ? { ...options, offset: currentOffset }
+      : options;
+    const response = await getRecordsPage<Fields>({
+      apiKey,
+      baseId,
+      tableId,
+      options: requestBody,
+      retry,
+    });
+
+    yield response;
+    currentOffset = response.offset;
+
+    if (currentOffset && (options?.maxRecords ?? 100) > 100) {
+      const interval: number = options?.requestInterval || 500;
+      await delay(interval);
+    }
+  } while (currentOffset);
 }
 
 export async function getRecords<Fields>({
@@ -32,37 +116,26 @@ export async function getRecords<Fields>({
   baseId,
   tableId,
   options,
+  retry,
 }: {
   apiKey: string;
   baseId: string;
   tableId: string;
   options?: GetRecordsQueryParameters;
+  retry?: AirtableRetryOptions;
 }): Promise<AirtableRecord<Fields>[]> {
   validateGetRecordsOptions(options);
   let records: AirtableRecord<Fields>[] = [];
-  let currentOffset: string | undefined;
-  do {
-    const requestBody = currentOffset
-      ? { ...options, offset: currentOffset }
-      : options;
-    const response = await airtableRequest<{
-      records: AirtableRecord<Fields>[];
-      offset?: string;
-    }>({
-      apiKey,
-      baseId,
-      tableId,
-      endpoint: '/listRecords',
-      method: 'POST',
-      body: requestBody,
-    });
-    records = records.concat(response.records);
-    currentOffset = response.offset;
-    if (currentOffset && (options?.maxRecords ?? 100) > 100) {
-      const interval: number = options?.requestInterval || 500;
-      await delay(interval);
-    }
-  } while (currentOffset);
+
+  for await (const page of iterateRecordsPages<Fields>({
+    apiKey,
+    baseId,
+    tableId,
+    options,
+    retry,
+  })) {
+    records = records.concat(page.records);
+  }
 
   return records;
 }
@@ -76,9 +149,6 @@ function validateGetRecordsOptions(options?: GetRecordsQueryParameters) {
       );
     }
   }
-  if (!options.maxRecords) {
-    options.maxRecords = 100;
-  }
 }
 
 export async function updateRecord<Fields>({
@@ -88,6 +158,7 @@ export async function updateRecord<Fields>({
   recordId,
   fields,
   options,
+  retry,
 }: {
   apiKey: string;
   baseId: string;
@@ -99,6 +170,7 @@ export async function updateRecord<Fields>({
     returnFieldsByFieldId?: boolean;
     overwriteFieldsNotSpecified?: boolean;
   };
+  retry?: AirtableRetryOptions;
 }): Promise<AirtableRecord<Fields>> {
   return await airtableRequest<AirtableRecord<Fields>>({
     apiKey,
@@ -112,6 +184,42 @@ export async function updateRecord<Fields>({
       returnFieldsByFieldId:
         options?.returnFieldsByFieldId === true ? true : false,
     },
+    retry,
+  });
+}
+
+export async function replaceRecord<Fields>({
+  apiKey,
+  baseId,
+  tableId,
+  recordId,
+  fields,
+  options,
+  retry,
+}: {
+  apiKey: string;
+  baseId: string;
+  tableId: string;
+  recordId: string;
+  fields: Fields;
+  options?: {
+    typecast?: boolean;
+    returnFieldsByFieldId?: boolean;
+  };
+  retry?: AirtableRetryOptions;
+}): Promise<AirtableRecord<Fields>> {
+  return await airtableRequest<AirtableRecord<Fields>>({
+    apiKey,
+    baseId,
+    tableId,
+    endpoint: `/${recordId}`,
+    method: 'PUT',
+    body: {
+      fields,
+      typecast: options?.typecast ?? false,
+      returnFieldsByFieldId: options?.returnFieldsByFieldId ?? false,
+    },
+    retry,
   });
 }
 
@@ -121,6 +229,7 @@ export async function updateRecords<Fields>({
   tableId,
   records,
   options,
+  retry,
 }: {
   apiKey: string;
   baseId: string;
@@ -132,6 +241,7 @@ export async function updateRecords<Fields>({
     overwriteFieldsNotSpecified?: boolean;
     requestInterval?: number;
   };
+  retry?: AirtableRetryOptions;
 }): Promise<{
   records: AirtableRecord<Fields>[];
 }> {
@@ -165,6 +275,72 @@ export async function updateRecords<Fields>({
         typecast: options?.typecast ?? false,
         returnFieldsByFieldId: options?.returnFieldsByFieldId ?? false,
       },
+      retry,
+    });
+
+    combinedResults = combinedResults.concat(result.records);
+    if (
+      records.length > chunkSize &&
+      chunks.indexOf(chunk) < chunks.length - 1
+    ) {
+      const interval: number = options?.requestInterval || 500;
+      await delay(interval);
+    }
+  }
+
+  return { records: combinedResults };
+}
+
+export async function replaceRecords<Fields>({
+  apiKey,
+  baseId,
+  tableId,
+  records,
+  options,
+  retry,
+}: {
+  apiKey: string;
+  baseId: string;
+  tableId: string;
+  records: { id: string; fields: Fields }[];
+  options?: {
+    typecast?: boolean;
+    returnFieldsByFieldId?: boolean;
+    requestInterval?: number;
+  };
+  retry?: AirtableRetryOptions;
+}): Promise<{
+  records: AirtableRecord<Fields>[];
+}> {
+  if (!Array.isArray(records) || records.length === 0) {
+    throw new Error(
+      'The records array is empty or not provided. Please provide a non-empty array of records to update.'
+    );
+  }
+
+  const chunkSize = 10;
+  const chunks = [];
+  for (let i = 0; i < records.length; i += chunkSize) {
+    chunks.push(records.slice(i, i + chunkSize));
+  }
+
+  let combinedResults: AirtableRecord<Fields>[] = [];
+
+  for (const chunk of chunks) {
+    const result = await airtableRequest<{
+      records: AirtableRecord<Fields>[];
+    }>({
+      apiKey,
+      baseId,
+      tableId,
+      endpoint: '/',
+      method: 'PUT',
+      body: {
+        records: chunk,
+        typecast: options?.typecast ?? false,
+        returnFieldsByFieldId: options?.returnFieldsByFieldId ?? false,
+      },
+      retry,
     });
 
     combinedResults = combinedResults.concat(result.records);
@@ -186,6 +362,7 @@ export async function updateRecordsUpsert<Fields>({
   tableId,
   records,
   options,
+  retry,
 }: {
   apiKey: string;
   baseId: string;
@@ -198,6 +375,7 @@ export async function updateRecordsUpsert<Fields>({
     overwriteFieldsNotSpecified?: boolean;
     requestInterval?: number;
   };
+  retry?: AirtableRetryOptions;
 }): Promise<{
   createdRecords: string[];
   updatedRecords: string[];
@@ -243,6 +421,7 @@ export async function updateRecordsUpsert<Fields>({
         returnFieldsByFieldId: options?.returnFieldsByFieldId ?? false,
         performUpsert: { fieldsToMergeOn: options.fieldsToMergeOn },
       },
+      retry,
     });
 
     allCreatedRecords = allCreatedRecords.concat(result.createdRecords);
@@ -261,18 +440,43 @@ export async function updateRecordsUpsert<Fields>({
   };
 }
 
+export async function deleteRecord({
+  apiKey,
+  baseId,
+  tableId,
+  recordId,
+  retry,
+}: {
+  apiKey: string;
+  baseId: string;
+  tableId: string;
+  recordId: string;
+  retry?: AirtableRetryOptions;
+}): Promise<DeleteRecordResponse> {
+  return await airtableRequest<DeleteRecordResponse>({
+    apiKey,
+    baseId,
+    tableId,
+    endpoint: `/${recordId}`,
+    method: 'DELETE',
+    retry,
+  });
+}
+
 export async function deleteRecords({
   apiKey,
   baseId,
   tableId,
   recordIds,
   options,
+  retry,
 }: {
   apiKey: string;
   baseId: string;
   tableId: string;
   recordIds: string[];
   options?: { requestInterval?: number };
+  retry?: AirtableRetryOptions;
 }): Promise<DeleteRecordsResponse> {
   if (!Array.isArray(recordIds) || recordIds.length === 0) {
     throw new Error(
@@ -289,13 +493,15 @@ export async function deleteRecords({
   let combinedResults: DeleteRecordResponse[] = [];
 
   for (const chunk of chunks) {
-    const query = chunk.map((id) => `records[]=${id}`).join('&');
     const result = await airtableRequest<DeleteRecordsResponse>({
       apiKey,
       baseId,
       tableId,
-      endpoint: `?${query}`,
+      endpoint: appendQueryToEndpoint('', {
+        'records[]': chunk,
+      }),
       method: 'DELETE',
+      retry,
     });
 
     combinedResults = combinedResults.concat(result.records);
@@ -314,6 +520,7 @@ export async function createRecord<Fields>({
   tableId,
   fields,
   options,
+  retry,
 }: {
   apiKey: string;
   baseId: string;
@@ -323,6 +530,7 @@ export async function createRecord<Fields>({
     typecast?: boolean;
     returnFieldsByFieldId?: boolean;
   };
+  retry?: AirtableRetryOptions;
 }): Promise<AirtableRecord<Fields>> {
   return await airtableRequest<AirtableRecord<Fields>>({
     apiKey,
@@ -335,6 +543,7 @@ export async function createRecord<Fields>({
       typecast: options?.typecast ?? false,
       returnFieldsByFieldId: options?.returnFieldsByFieldId ?? false,
     },
+    retry,
   });
 }
 
@@ -344,6 +553,7 @@ export async function createRecords<Fields>({
   tableId,
   records,
   options,
+  retry,
 }: {
   apiKey: string;
   baseId: string;
@@ -354,6 +564,7 @@ export async function createRecords<Fields>({
     returnFieldsByFieldId?: boolean;
     requestInterval?: number;
   };
+  retry?: AirtableRetryOptions;
 }): Promise<{
   records: AirtableRecord<Fields>[];
 }> {
@@ -385,6 +596,7 @@ export async function createRecords<Fields>({
         typecast: options?.typecast ?? false,
         returnFieldsByFieldId: options?.returnFieldsByFieldId ?? false,
       },
+      retry,
     });
     combinedResults = combinedResults.concat(result.records);
     if (

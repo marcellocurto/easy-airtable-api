@@ -1,6 +1,6 @@
 # Easy Airtable API
 
-Easy Airtable API is a lightweight, TypeScript-first Airtable client for reading, creating, updating, upserting, and deleting records.
+Easy Airtable API is a lightweight, TypeScript-first Airtable client for records, metadata/base APIs, code generation, and raw Airtable requests.
 
 It is built to stay practical:
 
@@ -48,6 +48,7 @@ A good setup is to generate Airtable types once and commit the generated file.
 AIRTABLE_ACCESS_TOKEN=pat_xxx
 AIRTABLE_BASE_ID=app_xxx
 AIRTABLE_PROJECTS_TABLE_ID=tbl_xxx
+AIRTABLE_WORKSPACE_ID=wsp_xxx
 ```
 
 ### Example `package.json` scripts
@@ -188,6 +189,109 @@ await generateAirtableTypes({
 });
 ```
 
+## Metadata/base APIs
+
+### List accessible bases
+
+```ts
+import { listBases } from 'easy-airtable-api';
+
+const result = await listBases({
+  apiKey: process.env.AIRTABLE_ACCESS_TOKEN!,
+});
+
+for (const base of result.bases) {
+  console.log(base.id, base.name, base.permissionLevel);
+}
+```
+
+### Fetch a base schema directly
+
+```ts
+import { getBaseSchema } from 'easy-airtable-api';
+
+const schema = await getBaseSchema({
+  apiKey: process.env.AIRTABLE_ACCESS_TOKEN!,
+  baseId: process.env.AIRTABLE_BASE_ID!,
+});
+
+console.log(schema.tables.map((table) => table.name));
+```
+
+This is the same metadata path used by the code generator when `source` includes a `baseId` and token.
+
+### Create a base
+
+```ts
+import { createBase } from 'easy-airtable-api';
+
+const created = await createBase({
+  apiKey: process.env.AIRTABLE_ACCESS_TOKEN!,
+  body: {
+    workspaceId: process.env.AIRTABLE_WORKSPACE_ID!,
+    name: 'Apartment Hunting',
+    tables: [
+      {
+        name: 'Apartments',
+        fields: [
+          { name: 'Name', type: 'singleLineText' },
+          {
+            name: 'Visited',
+            type: 'checkbox',
+            options: { color: 'greenBright', icon: 'check' },
+          },
+        ],
+      },
+    ],
+  },
+});
+
+console.log(created.id);
+```
+
+Per Airtable's metadata API documentation, creating a base requires a token authorized for `schema.bases:write`, and the caller must be able to create bases in the target workspace (documented as workspace creator permissions).
+
+## Raw Airtable request escape hatch
+
+Use `airtableRequestRaw()` when you need an Airtable endpoint that this library does not wrap yet, but still want the shared auth, retry, encoding, and structured error behavior.
+
+```ts
+import { airtableRequestRaw } from 'easy-airtable-api';
+
+const schema = await airtableRequestRaw({
+  apiKey: process.env.AIRTABLE_ACCESS_TOKEN!,
+  method: 'GET',
+  path: '/v0/meta/bases/app123/tables',
+});
+```
+
+It accepts either Airtable-style `/v0/...` paths or paths relative to the API root used internally.
+
+## Retry configuration
+
+All runtime helpers accept an optional top-level `retry` object for tuning retry behavior without leaving the library's shared request layer.
+
+```ts
+import { getRecords } from 'easy-airtable-api';
+
+const records = await getRecords({
+  apiKey: process.env.AIRTABLE_ACCESS_TOKEN!,
+  baseId: process.env.AIRTABLE_BASE_ID!,
+  tableId: process.env.AIRTABLE_PROJECTS_TABLE_ID!,
+  retry: {
+    maxRetries: 2,
+    baseDelayMs: 250,
+    maxDelayMs: 1000,
+    retryOn429: true,
+    retryOn5xx: true,
+    retryOnNetworkErrors: true,
+    useJitter: false,
+  },
+});
+```
+
+The same `retry` option is supported by metadata helpers such as `listBases()` / `getBaseSchema()` and by `airtableRequestRaw()`.
+
 ## Runtime examples
 
 ### Get a single record
@@ -201,7 +305,44 @@ const record = await getRecord<ProjectsRecordFields>({
   baseId: process.env.AIRTABLE_BASE_ID!,
   tableId: process.env.AIRTABLE_PROJECTS_TABLE_ID!,
   recordId: 'rec123',
+  options: {
+    returnFieldsByFieldId: false,
+  },
 });
+```
+
+### Get one page of records
+
+```ts
+import { getRecordsPage } from 'easy-airtable-api';
+import type { ProjectsRecordFields } from './airtable.generated';
+
+const page = await getRecordsPage<ProjectsRecordFields>({
+  apiKey: process.env.AIRTABLE_ACCESS_TOKEN!,
+  baseId: process.env.AIRTABLE_BASE_ID!,
+  tableId: process.env.AIRTABLE_PROJECTS_TABLE_ID!,
+  options: {
+    pageSize: 25,
+  },
+});
+```
+
+### Iterate through record pages
+
+```ts
+import { iterateRecordsPages } from 'easy-airtable-api';
+import type { ProjectsRecordFields } from './airtable.generated';
+
+for await (const page of iterateRecordsPages<ProjectsRecordFields>({
+  apiKey: process.env.AIRTABLE_ACCESS_TOKEN!,
+  baseId: process.env.AIRTABLE_BASE_ID!,
+  tableId: process.env.AIRTABLE_PROJECTS_TABLE_ID!,
+  options: {
+    pageSize: 100,
+  },
+})) {
+  console.log(page.records.length, page.offset);
+}
 ```
 
 ### Create multiple records
@@ -234,6 +375,24 @@ const result = await createRecords<ProjectsCreateFields>({
 });
 ```
 
+### Replace a single record
+
+```ts
+import { replaceRecord } from 'easy-airtable-api';
+import type { ProjectsCreateFields } from './airtable.generated';
+
+const result = await replaceRecord<ProjectsCreateFields>({
+  apiKey: process.env.AIRTABLE_ACCESS_TOKEN!,
+  baseId: process.env.AIRTABLE_BASE_ID!,
+  tableId: process.env.AIRTABLE_PROJECTS_TABLE_ID!,
+  recordId: 'rec123',
+  fields: {
+    Name: 'Project A',
+    Status: 'Done',
+  },
+});
+```
+
 ### Upsert records
 
 ```ts
@@ -259,6 +418,19 @@ const result = await updateRecordsUpsert<ProjectsCreateFields>({
 });
 ```
 
+### Delete a single record
+
+```ts
+import { deleteRecord } from 'easy-airtable-api';
+
+await deleteRecord({
+  apiKey: process.env.AIRTABLE_ACCESS_TOKEN!,
+  baseId: process.env.AIRTABLE_BASE_ID!,
+  tableId: process.env.AIRTABLE_PROJECTS_TABLE_ID!,
+  recordId: 'rec123',
+});
+```
+
 ### Delete records
 
 ```ts
@@ -278,11 +450,20 @@ Runtime package:
 
 ```ts
 import {
+  airtableRequestRaw,
+  createBase,
   createRecord,
   createRecords,
+  deleteRecord,
   deleteRecords,
+  getBaseSchema,
   getRecord,
   getRecords,
+  getRecordsPage,
+  iterateRecordsPages,
+  listBases,
+  replaceRecord,
+  replaceRecords,
   updateRecord,
   updateRecords,
   updateRecordsUpsert,

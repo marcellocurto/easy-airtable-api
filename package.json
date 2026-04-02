@@ -1,6 +1,6 @@
 {
   "name": "easy-airtable-api",
-  "version": "0.0.16",
+  "version": "0.0.17",
   "type": "module",
   "description": "Lightweight TypeScript-first Airtable client with metadata-based type generation.",
   "main": "lib/index.js",
@@ -16,14 +16,14 @@
     }
   },
   "bin": {
-    "easy-airtable-api": "./lib/cli.js"
+    "easy-airtable-api": "lib/cli.js"
   },
   "scripts": {
     "watch": "tsc --watch",
     "build": "rm -r ./lib && tsc",
     "publish": "npm publish",
     "lint": "eslint 'src/**/*.{ts,tsx}'",
-    "test": "npm run test:codegen",
+    "test": "npm run test:all",
     "test:codegen": "vitest run tests/codegen.test.ts",
     "test:integration": "RUN_AIRTABLE_INTEGRATION_TESTS=true vitest run tests/get-record.test.ts tests/get-records.test.ts tests/create-records.test.ts tests/update-records.test.ts tests/delete-records.test.ts",
     "test:all": "vitest run"
@@ -33,7 +33,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/marcellocurto/easy-airtable-api.git"
+    "url": "git+https://github.com/marcellocurto/easy-airtable-api.git"
   },
   "homepage": "https://marcellocurto.com/code/easy-airtable-api",
   "author": "Marcello Curto",

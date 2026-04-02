@@ -1,5 +1,67 @@
 import { RequestMethods } from './types/tables.js';
-import type { AirtableBaseSchema } from './types/metadata.js';
+export type AirtableQueryValue = string | number | boolean | Array<string | number | boolean> | undefined;
+export type AirtableRetryOptions = {
+    maxRetries?: number;
+    baseDelayMs?: number;
+    maxDelayMs?: number;
+    retryOn429?: boolean;
+    retryOn5xx?: boolean;
+    retryOnNetworkErrors?: boolean;
+    useJitter?: boolean;
+};
+export declare class AirtableApiError extends Error {
+    statusCode?: number;
+    airtableType?: string;
+    retryable: boolean;
+    retryAfterMs?: number;
+    cause?: unknown;
+    request?: {
+        method: string;
+        baseId?: string;
+        tableId?: string;
+        path?: string;
+    };
+    constructor({ message, statusCode, airtableType, retryable, request, retryAfterMs, cause, }: {
+        message: string;
+        statusCode?: number;
+        airtableType?: string;
+        retryable: boolean;
+        retryAfterMs?: number;
+        cause?: unknown;
+        request?: {
+            method: string;
+            baseId?: string;
+            tableId?: string;
+            path?: string;
+        };
+    });
+}
+export declare function buildQueryString(query: Record<string, AirtableQueryValue>): string;
+export declare function appendQueryToEndpoint(endpoint: string, query: Record<string, AirtableQueryValue>): string;
+export declare function airtableApiRequest<T>(request: {
+    apiKey: string;
+    path: string;
+    method: RequestMethods;
+    query?: Record<string, AirtableQueryValue>;
+    body?: unknown;
+    apiURL?: string;
+    retry?: AirtableRetryOptions;
+    requestContext?: {
+        method: string;
+        baseId?: string;
+        tableId?: string;
+        path?: string;
+    };
+}): Promise<T>;
+export declare function airtableRequestRaw<T = unknown>(request: {
+    apiKey: string;
+    method: RequestMethods;
+    path: string;
+    query?: Record<string, AirtableQueryValue>;
+    body?: unknown;
+    apiURL?: string;
+    retry?: AirtableRetryOptions;
+}): Promise<T>;
 export declare function airtableRequest<T>(request: {
     apiKey: string;
     baseId: string;
@@ -8,8 +70,5 @@ export declare function airtableRequest<T>(request: {
     method: RequestMethods;
     body?: object;
     apiURL?: string;
+    retry?: AirtableRetryOptions;
 }): Promise<T>;
-export declare function getBaseSchema({ apiKey, baseId, }: {
-    apiKey: string;
-    baseId: string;
-}): Promise<AirtableBaseSchema>;
