@@ -1,0 +1,77 @@
+{
+  "tables": [
+    {
+      "id": "tblOsterreich1",
+      "name": "Österreich",
+      "primaryFieldId": "fldNameA12345",
+      "fields": [
+        {
+          "id": "fldNameA12345",
+          "name": "Crème brûlée",
+          "type": "singleLineText"
+        },
+        {
+          "id": "fldABSlash01",
+          "name": "A/B",
+          "type": "singleLineText"
+        },
+        {
+          "id": "fldABSpace02",
+          "name": "A B",
+          "type": "number"
+        },
+        {
+          "id": "fldDupText03",
+          "name": "Duplicated",
+          "type": "singleLineText"
+        },
+        {
+          "id": "fldDupNum004",
+          "name": "Duplicated",
+          "type": "number"
+        },
+        {
+          "id": "fldTokyo0005",
+          "name": "東京",
+          "type": "singleLineText"
+        }
+      ]
+    },
+    {
+      "id": "tblOsterreich2",
+      "name": "Osterreich",
+      "primaryFieldId": "fldNameB12345",
+      "fields": [
+        {
+          "id": "fldNameB12345",
+          "name": "São Tomé und Príncipe",
+          "type": "singleLineText"
+        }
+      ]
+    },
+    {
+      "id": "tblFooSlash001",
+      "name": "Foo/Bar",
+      "primaryFieldId": "fldFooSlash01",
+      "fields": [
+        {
+          "id": "fldFooSlash01",
+          "name": "Name",
+          "type": "singleLineText"
+        }
+      ]
+    },
+    {
+      "id": "tblFooSpace002",
+      "name": "Foo Bar",
+      "primaryFieldId": "fldFooSpace01",
+      "fields": [
+        {
+          "id": "fldFooSpace01",
+          "name": "Name",
+          "type": "singleLineText"
+        }
+      ]
+    }
+  ]
+}

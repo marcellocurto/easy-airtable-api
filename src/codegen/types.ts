@@ -51,6 +51,7 @@ export interface NormalizedTable {
   id: string;
   name: string;
   tsName: string;
+  tsConstKey: string;
   primaryFieldId: string;
   fields: NormalizedField[];
 }
@@ -59,6 +60,7 @@ export interface NormalizedField {
   id: string;
   name: string;
   tsKey: string;
+  tsConstKey: string;
   tsTypeName: string;
   airtableType: string;
   readonly: boolean;

@@ -1,0 +1,70 @@
+{
+  "tables": [
+    {
+      "id": "tblAliases1234",
+      "name": "Alias Cases",
+      "primaryFieldId": "fldAliasName1",
+      "fields": [
+        {
+          "id": "fldAliasName1",
+          "name": "Name",
+          "type": "singleLineText"
+        },
+        {
+          "id": "fldLegacyLkp1",
+          "name": "Legacy Lookup Tags",
+          "type": "multipleLookupValues",
+          "options": {
+            "result": {
+              "type": "multipleSelects",
+              "options": {
+                "choices": [
+                  { "id": "sel1", "name": "Red" },
+                  { "id": "sel2", "name": "Blue" }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "id": "fldLookupAtt1",
+          "name": "Lookup Assets",
+          "type": "lookup",
+          "options": {
+            "result": {
+              "type": "multipleAttachments"
+            }
+          }
+        },
+        {
+          "id": "fldRollupAtt1",
+          "name": "Rollup Assets",
+          "type": "rollup",
+          "options": {
+            "result": {
+              "type": "multipleAttachments"
+            }
+          }
+        },
+        {
+          "id": "fldLinkAlias1",
+          "name": "Linked Tasks",
+          "type": "linkToAnotherRecord",
+          "options": {
+            "linkedTableId": "tblTasks123456",
+            "isReversed": false,
+            "prefersSingleRecordLink": false
+          }
+        },
+        {
+          "id": "fldAttachAl1",
+          "name": "Legacy Attachment",
+          "type": "attachment",
+          "options": {
+            "isReversed": false
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "tables": [
+    {
+      "id": "tblStructured123",
+      "name": "Generated Fields",
+      "primaryFieldId": "fldPrimary123",
+      "fields": [
+        {
+          "id": "fldPrimary123",
+          "name": "Name",
+          "type": "singleLineText"
+        },
+        {
+          "id": "fldAI12345678",
+          "name": "AI Summary",
+          "type": "aiText",
+          "options": {
+            "prompt": ["Summarize this row"]
+          }
+        },
+        {
+          "id": "fldAssignee12",
+          "name": "Assignee",
+          "type": "singleCollaborator",
+          "options": {}
+        },
+        {
+          "id": "fldReviewers1",
+          "name": "Reviewers",
+          "type": "multipleCollaborators",
+          "options": {}
+        },
+        {
+          "id": "fldAssets1234",
+          "name": "Assets",
+          "type": "multipleAttachments",
+          "options": {
+            "isReversed": false
+          }
+        },
+        {
+          "id": "fldBarcode123",
+          "name": "Barcode",
+          "type": "barcode"
+        },
+        {
+          "id": "fldButton1234",
+          "name": "Action",
+          "type": "button"
+        },
+        {
+          "id": "fldLinked1234",
+          "name": "Related Tasks",
+          "type": "multipleRecordLinks",
+          "options": {
+            "linkedTableId": "tblTasks123456",
+            "isReversed": false,
+            "prefersSingleRecordLink": false
+          }
+        }
+      ]
+    }
+  ]
+}

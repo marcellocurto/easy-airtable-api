@@ -35,6 +35,11 @@ export interface BarcodeCell {
     type?: string;
     text: string;
 }
+export interface BarcodeWrite {
+    text: string;
+    type?: string;
+}
+export type Barcode = BarcodeCell;
 export interface BarcodeFieldTypeAndOptions {
     type: 'barcode';
 }
@@ -42,6 +47,7 @@ export interface ButtonCell {
     label: string;
     url: string | null;
 }
+export type ButtonFieldValue = ButtonCell;
 export interface ButtonFieldTypeAndOptions {
     type: 'button';
 }
@@ -59,6 +65,10 @@ export interface CollaboratorCell {
     email?: string;
     name?: string;
     profilePicUrl?: string;
+}
+export interface CollaboratorWrite {
+    id: string;
+    email?: string;
 }
 export interface SingleCollaboratorFieldTypeAndOptions {
     type: 'singleCollaborator';
@@ -189,12 +199,7 @@ export interface LookupFieldTypeAndOptions {
         result: unknown;
     };
 }
-export type Collaborator = {
-    id: string;
-    email?: string;
-    name?: string;
-    profilePicUrl?: string;
-};
+export type Collaborator = CollaboratorCell;
 export type Collaborators = Collaborator[];
 export type ChoiceColor = 'blueLight2' | 'cyanLight2' | 'tealLight2' | 'greenLight2' | 'yellowLight2' | 'orangeLight2' | 'redLight2' | 'pinkLight2' | 'purpleLight2' | 'grayLight2' | 'blueLight1' | 'cyanLight1' | 'tealLight1' | 'greenLight1' | 'yellowLight1' | 'orangeLight1' | 'redLight1' | 'pinkLight1' | 'purpleLight1' | 'grayLight1' | 'blueBright' | 'cyanBright' | 'tealBright' | 'greenBright' | 'yellowBright' | 'orangeBright' | 'redBright' | 'pinkBright' | 'purpleBright' | 'grayBright' | 'blueDark1' | 'cyanDark1' | 'tealDark1' | 'greenDark1' | 'yellowDark1' | 'orangeDark1' | 'redDark1' | 'pinkDark1' | 'purpleDark1' | 'grayDark1';
 export type Choice = {
@@ -245,10 +250,7 @@ export type MultipleAttachments = Attachment[];
 export type FormulaSingleReturn = string | number;
 export type Rollup = string | number;
 export type AutoNumber = number;
-export type AirtableButton = {
-    label: string;
-    url: string;
-};
+export type AirtableButton = ButtonCell;
 export type LastModifiedTime = string;
 export type CreatedTime = string;
 export type DateTime = string;
