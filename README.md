@@ -221,6 +221,22 @@ This is the same metadata path used by the code generator when `source` includes
 
 Base creation is intentionally not exposed yet. See issue `#30` for verification work before shipping a public `createBase()` API.
 
+## Raw Airtable request escape hatch
+
+Use `airtableRequestRaw()` when you need an Airtable endpoint that this library does not wrap yet, but still want the shared auth, retry, encoding, and structured error behavior.
+
+```ts
+import { airtableRequestRaw } from 'easy-airtable-api';
+
+const schema = await airtableRequestRaw({
+  apiKey: process.env.AIRTABLE_ACCESS_TOKEN!,
+  method: 'GET',
+  path: '/v0/meta/bases/app123/tables',
+});
+```
+
+It accepts either Airtable-style `/v0/...` paths or paths relative to the API root used internally.
+
 ## Runtime examples
 
 ### Get a single record
@@ -379,6 +395,7 @@ Runtime package:
 
 ```ts
 import {
+  airtableRequestRaw,
   createRecord,
   createRecords,
   deleteRecord,
