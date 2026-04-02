@@ -145,12 +145,22 @@ function buildAirtableApiUrl({
   return `${url}${path}`;
 }
 
+function normalizeApiPath(path: string, apiURL?: string): string {
+  const url = apiURL || 'https://api.airtable.com/v0';
+
+  if (url.endsWith('/v0') && (path === '/v0' || path.startsWith('/v0/'))) {
+    return path.slice('/v0'.length);
+  }
+
+  return path;
+}
+
 export async function airtableApiRequest<T>(request: {
   apiKey: string;
   path: string;
   method: RequestMethods;
   query?: Record<string, AirtableQueryValue>;
-  body?: object;
+  body?: unknown;
   apiURL?: string;
   requestContext?: {
     method: string;
@@ -219,6 +229,30 @@ export async function airtableApiRequest<T>(request: {
       throw error;
     }
   }
+}
+
+export async function airtableRequestRaw<T = unknown>(request: {
+  apiKey: string;
+  method: RequestMethods;
+  path: string;
+  query?: Record<string, AirtableQueryValue>;
+  body?: unknown;
+  apiURL?: string;
+}): Promise<T> {
+  const { apiKey, method, path, query, body, apiURL } = request;
+
+  return airtableApiRequest<T>({
+    apiKey,
+    method,
+    query,
+    body,
+    apiURL,
+    path: normalizeApiPath(path, apiURL),
+    requestContext: {
+      method,
+      path: appendQueryToEndpoint(path, query ?? {}),
+    },
+  });
 }
 
 export async function airtableRequest<T>(request: {

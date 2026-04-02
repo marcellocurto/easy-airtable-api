@@ -15,7 +15,7 @@ export {
 } from './records.js';
 
 export { listBases, getBaseSchema } from './bases.js';
-export { AirtableApiError } from './requests.js';
+export { airtableRequestRaw, AirtableApiError } from './requests.js';
 export type { AirtableRecord } from './types/records.js';
 export type { ListBasesResponse } from './types/bases.js';
 export type {

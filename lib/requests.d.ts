@@ -34,7 +34,7 @@ export declare function airtableApiRequest<T>(request: {
     path: string;
     method: RequestMethods;
     query?: Record<string, AirtableQueryValue>;
-    body?: object;
+    body?: unknown;
     apiURL?: string;
     requestContext?: {
         method: string;
@@ -42,6 +42,14 @@ export declare function airtableApiRequest<T>(request: {
         tableId?: string;
         path?: string;
     };
+}): Promise<T>;
+export declare function airtableRequestRaw<T = unknown>(request: {
+    apiKey: string;
+    method: RequestMethods;
+    path: string;
+    query?: Record<string, AirtableQueryValue>;
+    body?: unknown;
+    apiURL?: string;
 }): Promise<T>;
 export declare function airtableRequest<T>(request: {
     apiKey: string;
