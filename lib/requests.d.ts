@@ -1,5 +1,14 @@
 import { RequestMethods } from './types/tables.js';
 export type AirtableQueryValue = string | number | boolean | Array<string | number | boolean> | undefined;
+export type AirtableRetryOptions = {
+    maxRetries?: number;
+    baseDelayMs?: number;
+    maxDelayMs?: number;
+    retryOn429?: boolean;
+    retryOn5xx?: boolean;
+    retryOnNetworkErrors?: boolean;
+    useJitter?: boolean;
+};
 export declare class AirtableApiError extends Error {
     statusCode?: number;
     airtableType?: string;
@@ -36,6 +45,7 @@ export declare function airtableApiRequest<T>(request: {
     query?: Record<string, AirtableQueryValue>;
     body?: unknown;
     apiURL?: string;
+    retry?: AirtableRetryOptions;
     requestContext?: {
         method: string;
         baseId?: string;
@@ -50,6 +60,7 @@ export declare function airtableRequestRaw<T = unknown>(request: {
     query?: Record<string, AirtableQueryValue>;
     body?: unknown;
     apiURL?: string;
+    retry?: AirtableRetryOptions;
 }): Promise<T>;
 export declare function airtableRequest<T>(request: {
     apiKey: string;
@@ -59,4 +70,5 @@ export declare function airtableRequest<T>(request: {
     method: RequestMethods;
     body?: object;
     apiURL?: string;
+    retry?: AirtableRetryOptions;
 }): Promise<T>;

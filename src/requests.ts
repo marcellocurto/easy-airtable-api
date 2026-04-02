@@ -11,6 +11,26 @@ export type AirtableQueryValue =
   | Array<string | number | boolean>
   | undefined;
 
+export type AirtableRetryOptions = {
+  maxRetries?: number;
+  baseDelayMs?: number;
+  maxDelayMs?: number;
+  retryOn429?: boolean;
+  retryOn5xx?: boolean;
+  retryOnNetworkErrors?: boolean;
+  useJitter?: boolean;
+};
+
+const DEFAULT_RETRY_OPTIONS: Required<AirtableRetryOptions> = {
+  maxRetries: 5,
+  baseDelayMs: 500,
+  maxDelayMs: 8000,
+  retryOn429: true,
+  retryOn5xx: true,
+  retryOnNetworkErrors: true,
+  useJitter: true,
+};
+
 export class AirtableApiError extends Error {
   statusCode?: number;
   airtableType?: string;
@@ -57,13 +77,57 @@ export class AirtableApiError extends Error {
   }
 }
 
+function resolveRetryOptions(
+  options?: AirtableRetryOptions
+): Required<AirtableRetryOptions> {
+  const maxRetries =
+    typeof options?.maxRetries === 'number' && Number.isFinite(options.maxRetries)
+      ? Math.max(0, Math.floor(options.maxRetries))
+      : DEFAULT_RETRY_OPTIONS.maxRetries;
+  const baseDelayMs =
+    typeof options?.baseDelayMs === 'number' && Number.isFinite(options.baseDelayMs)
+      ? Math.max(0, options.baseDelayMs)
+      : DEFAULT_RETRY_OPTIONS.baseDelayMs;
+  const maxDelayMs =
+    typeof options?.maxDelayMs === 'number' && Number.isFinite(options.maxDelayMs)
+      ? Math.max(0, options.maxDelayMs)
+      : DEFAULT_RETRY_OPTIONS.maxDelayMs;
+
+  return {
+    maxRetries,
+    baseDelayMs,
+    maxDelayMs,
+    retryOn429: options?.retryOn429 ?? DEFAULT_RETRY_OPTIONS.retryOn429,
+    retryOn5xx: options?.retryOn5xx ?? DEFAULT_RETRY_OPTIONS.retryOn5xx,
+    retryOnNetworkErrors:
+      options?.retryOnNetworkErrors ??
+      DEFAULT_RETRY_OPTIONS.retryOnNetworkErrors,
+    useJitter: options?.useJitter ?? DEFAULT_RETRY_OPTIONS.useJitter,
+  };
+}
+
 function shouldRetryError(
   error: unknown,
-  attempt: number
+  attempt: number,
+  retryOptions: Required<AirtableRetryOptions>
 ): error is AirtableApiError {
-  return (
-    error instanceof AirtableApiError && error.retryable && attempt < 5
-  );
+  if (!(error instanceof AirtableApiError) || !error.retryable) {
+    return false;
+  }
+
+  if (attempt >= retryOptions.maxRetries) {
+    return false;
+  }
+
+  if (error.statusCode === 429) {
+    return retryOptions.retryOn429;
+  }
+
+  if (error.statusCode !== undefined && error.statusCode >= 500) {
+    return retryOptions.retryOn5xx;
+  }
+
+  return false;
 }
 
 function isRetryableNetworkError(error: unknown): boolean {
@@ -79,12 +143,24 @@ function isRetryableNetworkError(error: unknown): boolean {
   );
 }
 
-function getRetryDelayMs(error: AirtableApiError, attempt: number): number {
+function getRetryDelayMs(
+  error: AirtableApiError,
+  attempt: number,
+  retryOptions: Required<AirtableRetryOptions>
+): number {
   if (error.retryAfterMs !== undefined) {
     return error.retryAfterMs;
   }
 
-  const cappedDelay = Math.min(500 * 2 ** attempt, 8000);
+  const cappedDelay = Math.min(
+    retryOptions.baseDelayMs * 2 ** attempt,
+    retryOptions.maxDelayMs
+  );
+
+  if (!retryOptions.useJitter) {
+    return cappedDelay;
+  }
+
   return Math.round(Math.random() * cappedDelay);
 }
 
@@ -162,6 +238,7 @@ export async function airtableApiRequest<T>(request: {
   query?: Record<string, AirtableQueryValue>;
   body?: unknown;
   apiURL?: string;
+  retry?: AirtableRetryOptions;
   requestContext?: {
     method: string;
     baseId?: string;
@@ -176,6 +253,7 @@ export async function airtableApiRequest<T>(request: {
     query,
     body,
     apiURL,
+    retry,
     requestContext,
   } = request;
 
@@ -194,6 +272,7 @@ export async function airtableApiRequest<T>(request: {
     method,
     path: resolvedPath,
   };
+  const retryOptions = resolveRetryOptions(retry);
 
   for (let attempt = 0; ; attempt += 1) {
     try {
@@ -210,19 +289,24 @@ export async function airtableApiRequest<T>(request: {
 
       return response.data;
     } catch (error) {
-      if (shouldRetryError(error, attempt)) {
-        await delay(getRetryDelayMs(error, attempt));
+      if (shouldRetryError(error, attempt, retryOptions)) {
+        await delay(getRetryDelayMs(error, attempt, retryOptions));
         continue;
       }
 
-      if (error instanceof Error && isRetryableNetworkError(error) && attempt < 5) {
+      if (
+        error instanceof Error &&
+        retryOptions.retryOnNetworkErrors &&
+        isRetryableNetworkError(error) &&
+        attempt < retryOptions.maxRetries
+      ) {
         const retryableError = new AirtableApiError({
           message: error.message,
           retryable: true,
           request: context,
           cause: error,
         });
-        await delay(getRetryDelayMs(retryableError, attempt));
+        await delay(getRetryDelayMs(retryableError, attempt, retryOptions));
         continue;
       }
 
@@ -238,8 +322,9 @@ export async function airtableRequestRaw<T = unknown>(request: {
   query?: Record<string, AirtableQueryValue>;
   body?: unknown;
   apiURL?: string;
+  retry?: AirtableRetryOptions;
 }): Promise<T> {
-  const { apiKey, method, path, query, body, apiURL } = request;
+  const { apiKey, method, path, query, body, apiURL, retry } = request;
 
   return airtableApiRequest<T>({
     apiKey,
@@ -247,6 +332,7 @@ export async function airtableRequestRaw<T = unknown>(request: {
     query,
     body,
     apiURL,
+    retry,
     path: normalizeApiPath(path, apiURL),
     requestContext: {
       method,
@@ -263,8 +349,9 @@ export async function airtableRequest<T>(request: {
   method: RequestMethods;
   body?: object;
   apiURL?: string;
+  retry?: AirtableRetryOptions;
 }): Promise<T> {
-  const { apiKey, baseId, tableId, endpoint, method, body, apiURL } = request;
+  const { apiKey, baseId, tableId, endpoint, method, body, apiURL, retry } = request;
 
   if (!baseId) {
     throw new Error(
@@ -283,6 +370,7 @@ export async function airtableRequest<T>(request: {
     body,
     apiURL,
     path: `/${encodeURIComponent(baseId)}/${encodeURIComponent(tableId)}${endpoint}`,
+    retry,
     requestContext: {
       method,
       baseId,

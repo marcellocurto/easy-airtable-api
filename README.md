@@ -237,6 +237,31 @@ const schema = await airtableRequestRaw({
 
 It accepts either Airtable-style `/v0/...` paths or paths relative to the API root used internally.
 
+## Retry configuration
+
+All runtime helpers accept an optional top-level `retry` object for tuning retry behavior without leaving the library's shared request layer.
+
+```ts
+import { getRecords } from 'easy-airtable-api';
+
+const records = await getRecords({
+  apiKey: process.env.AIRTABLE_ACCESS_TOKEN!,
+  baseId: process.env.AIRTABLE_BASE_ID!,
+  tableId: process.env.AIRTABLE_PROJECTS_TABLE_ID!,
+  retry: {
+    maxRetries: 2,
+    baseDelayMs: 250,
+    maxDelayMs: 1000,
+    retryOn429: true,
+    retryOn5xx: true,
+    retryOnNetworkErrors: true,
+    useJitter: false,
+  },
+});
+```
+
+The same `retry` option is supported by metadata helpers such as `listBases()` / `getBaseSchema()` and by `airtableRequestRaw()`.
+
 ## Runtime examples
 
 ### Get a single record

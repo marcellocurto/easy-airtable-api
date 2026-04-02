@@ -133,6 +133,111 @@ describe('airtableRequestRaw', () => {
     await expect(promise).rejects.toBeInstanceOf(AirtableApiError);
   });
 
+  it('can disable retries for specific failure classes', async () => {
+    requestMock.mockImplementationOnce((options, callback) => {
+      const response = new EventEmitter() as EventEmitter & {
+        statusCode?: number;
+        statusMessage?: string;
+      };
+      response.statusCode = 429;
+      response.statusMessage = 'Too Many Requests';
+
+      const req = new EventEmitter() as EventEmitter & {
+        write: (chunk: string) => void;
+        end: () => void;
+      };
+
+      req.write = () => undefined;
+      req.end = () => {
+        callback(response);
+        response.emit(
+          'data',
+          Buffer.from(
+            JSON.stringify({
+              error: {
+                type: 'RATE_LIMIT_REACHED',
+                message: 'Do not retry me',
+              },
+            })
+          )
+        );
+        response.emit('end');
+      };
+
+      return req;
+    });
+
+    const promise = airtableRequestRaw({
+      apiKey: 'pat123',
+      method: 'GET',
+      path: '/v0/meta/bases',
+      retry: {
+        retryOn429: false,
+      },
+    });
+
+    await expect(promise).rejects.toMatchObject({
+      statusCode: 429,
+      airtableType: 'RATE_LIMIT_REACHED',
+      message: 'Do not retry me',
+    });
+    expect(requestMock).toHaveBeenCalledTimes(1);
+    expect(sleepMock).not.toHaveBeenCalled();
+  });
+
+  it('uses custom retry limits and backoff settings', async () => {
+    const randomSpy = vi.spyOn(Math, 'random');
+
+    requestMock.mockImplementation((options, callback) => {
+      const response = new EventEmitter() as EventEmitter & {
+        statusCode?: number;
+        statusMessage?: string;
+      };
+      response.statusCode = 503;
+      response.statusMessage = 'Service Unavailable';
+
+      const req = new EventEmitter() as EventEmitter & {
+        write: (chunk: string) => void;
+        end: () => void;
+      };
+
+      req.write = () => undefined;
+      req.end = () => {
+        callback(response);
+        response.emit('data', Buffer.from(JSON.stringify({})));
+        response.emit('end');
+      };
+
+      return req;
+    });
+
+    try {
+      await expect(
+        airtableRequestRaw({
+          apiKey: 'pat123',
+          method: 'GET',
+          path: '/v0/meta/bases/app123/tables',
+          retry: {
+            maxRetries: 1,
+            baseDelayMs: 123,
+            maxDelayMs: 123,
+            useJitter: false,
+          },
+        })
+      ).rejects.toMatchObject({
+        statusCode: 503,
+        retryable: true,
+      });
+
+      expect(requestMock).toHaveBeenCalledTimes(2);
+      expect(sleepMock).toHaveBeenCalledTimes(1);
+      expect(sleepMock).toHaveBeenCalledWith(123);
+      expect(randomSpy).not.toHaveBeenCalled();
+    } finally {
+      randomSpy.mockRestore();
+    }
+  });
+
   it('reuses shared structured errors and retry behavior', async () => {
     const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.5);
 
