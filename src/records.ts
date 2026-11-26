@@ -8,7 +8,11 @@ import {
   GetRecordsQueryParameters,
 } from './types/records.js';
 import { DEFAULT_REQUEST_INTERVAL_MS, sendInChunks } from './batches.js';
-import { appendQueryToEndpoint, airtableRequest } from './requests.js';
+import {
+  AirtableApiError,
+  appendQueryToEndpoint,
+  airtableRequest,
+} from './requests.js';
 import type { AirtableRetryOptions } from './requests.js';
 import { delay } from './utils.js';
 
@@ -70,7 +74,7 @@ export async function getRecord<Fields>({
   retry?: AirtableRetryOptions;
 }): Promise<AirtableRecord<Fields>> {
   requireRecordId(recordId);
-  const endpoint = appendQueryToEndpoint(`/${recordId}`, {
+  const endpoint = appendQueryToEndpoint(`/${encodeURIComponent(recordId)}`, {
     cellFormat: options?.cellFormat,
     returnFieldsByFieldId: options?.returnFieldsByFieldId,
   });
@@ -330,7 +334,7 @@ export async function updateRecord<Fields>({
     apiKey,
     baseId,
     tableId,
-    endpoint: `/${recordId}`,
+    endpoint: `/${encodeURIComponent(recordId)}`,
     method: options?.overwriteFieldsNotSpecified === true ? 'PUT' : 'PATCH',
     body: {
       fields,
@@ -367,7 +371,7 @@ export async function replaceRecord<Fields>({
     apiKey,
     baseId,
     tableId,
-    endpoint: `/${recordId}`,
+    endpoint: `/${encodeURIComponent(recordId)}`,
     method: 'PUT',
     body: {
       fields,
@@ -559,14 +563,31 @@ export async function deleteRecord({
   retry?: AirtableRetryOptions;
 }): Promise<DeleteRecordResponse> {
   requireRecordId(recordId);
-  return await airtableRequest<DeleteRecordResponse>({
-    apiKey,
-    baseId,
-    tableId,
-    endpoint: `/${recordId}`,
-    method: 'DELETE',
-    retry,
-  });
+  try {
+    return await airtableRequest<DeleteRecordResponse>({
+      apiKey,
+      baseId,
+      tableId,
+      endpoint: `/${encodeURIComponent(recordId)}`,
+      method: 'DELETE',
+      retry,
+    });
+  } catch (error) {
+    if (isGoneAfterRetry(error)) return { id: recordId, deleted: true };
+    throw error;
+  }
+}
+
+/**
+ * A delete whose response was lost is retried, and the retry finds the record
+ * already gone with a 404. That 404 means the delete worked.
+ */
+function isGoneAfterRetry(error: unknown): boolean {
+  return (
+    error instanceof AirtableApiError &&
+    error.statusCode === 404 &&
+    (error.attempts ?? 1) > 1
+  );
 }
 
 export async function deleteRecords({
@@ -603,6 +624,11 @@ export async function deleteRecords({
         }),
         method: 'DELETE',
         retry,
+      }).catch((error: unknown) => {
+        if (!isGoneAfterRetry(error)) throw error;
+        return {
+          records: chunk.map((id) => ({ id, deleted: true as const })),
+        };
       }),
     combine: combineRecords,
   });

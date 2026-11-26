@@ -39,6 +39,9 @@
   "homepage": "https://marcellocurto.com/code/easy-airtable-api",
   "author": "Marcello Curto",
   "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
   "prettier": {
     "trailingComma": "es5",
     "tabWidth": 2,

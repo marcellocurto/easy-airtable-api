@@ -23,7 +23,6 @@ export interface GenerateAirtableTypesOptions {
     includeTableIds?: boolean;
     includeFieldIds?: boolean;
     schemaMode?: SchemaMode;
-    format?: boolean;
 }
 export interface AirtableCodegenResult {
     content: string;

@@ -8,12 +8,25 @@ export type AirtableRetryOptions = {
     retryOn5xx?: boolean;
     retryOnNetworkErrors?: boolean;
     useJitter?: boolean;
+    /**
+     * How long an attempt may wait without receiving data before it fails with
+     * ETIMEDOUT, which is retried like other network errors. Defaults to five
+     * minutes.
+     */
+    timeoutMs?: number;
 };
 export declare class AirtableApiError extends Error {
     statusCode?: number;
     airtableType?: string;
+    /**
+     * Whether resending this exact request is safe and could succeed. It is
+     * false for a request that isn't safe to repeat, such as a create, when
+     * Airtable may already have applied it after a 5xx or a dropped connection.
+     */
     retryable: boolean;
     retryAfterMs?: number;
+    /** How many attempts were sent before the request failed for good. */
+    attempts?: number;
     cause?: unknown;
     request?: {
         method: string;

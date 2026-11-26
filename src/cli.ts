@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { parseGenerateArgs } from './cli-args.js';
+import { parseGenerateArgs, unknownCommandMessage } from './cli-args.js';
 import { generateAirtableTypes } from './codegen/generate.js';
 
 function printHelp() {
@@ -32,7 +32,7 @@ async function main() {
   }
 
   if (command !== 'generate') {
-    throw new Error(`Unknown command: ${command}`);
+    throw new Error(unknownCommandMessage(command));
   }
 
   const options = args.slice(1);

@@ -452,4 +452,37 @@ describe('Airtable codegen', () => {
       '  "Status"?: "Todo" | "In Progress" | "Done" | (string & {});'
     );
   });
+
+  it('lets update types clear a field with null', async () => {
+    const schema = await loadFixture('base-schema.json');
+
+    const result = await buildAirtableTypes({ source: { schema } });
+
+    await compileGeneratedOutput({
+      generatedContent: result.content,
+      usageSource: `
+        import type { ProjectsCreateFields, ProjectsUpdateFields } from './airtable.generated';
+
+        export const clear: ProjectsUpdateFields = { Name: null, Status: null };
+        // @ts-expect-error Creates leave a field out instead of sending null.
+        export const create: ProjectsCreateFields = { Name: null };
+      `,
+    });
+  });
+
+  it.each([
+    ['enumMode', 'literl', 'literal, hybrid, broad'],
+    ['schemaMode', 'reed', 'read, write, full'],
+    ['createRequiredMode', 'primary', 'allOptional, primaryField'],
+    ['unknownFieldBehavior', 'warn', 'unknown, error'],
+  ])(
+    'rejects an invalid %s from a JavaScript caller',
+    async (option, value, allowed) => {
+      const schema = await loadFixture('base-schema.json');
+
+      await expect(
+        buildAirtableTypes({ source: { schema }, [option]: value })
+      ).rejects.toThrow(`Invalid value for ${option}. Use one of: ${allowed}.`);
+    }
+  );
 });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseGenerateArgs } from '../src/cli-args.js';
+import { parseGenerateArgs, unknownCommandMessage } from '../src/cli-args.js';
 
 describe('parseGenerateArgs', () => {
   it('reads every option, in both --flag value and --flag=value form', () => {
@@ -46,9 +46,7 @@ describe('parseGenerateArgs', () => {
   it('rejects a mode value that is not one of the allowed ones', () => {
     expect(() =>
       parseGenerateArgs(['--schemaPath', 's.json', '--schemaMode', 'reed'])
-    ).toThrow(
-      'Invalid value for --schemaMode. Use one of: read, write, full.'
-    );
+    ).toThrow('Invalid value for --schemaMode. Use one of: read, write, full.');
   });
 
   it('rejects an unknown option', () => {
@@ -101,5 +99,15 @@ describe('parseGenerateArgs', () => {
     expect(() =>
       parseGenerateArgs(['--schemaPath', 's.json', '--noTableIds=x'])
     ).toThrow('Unknown option: --noTableIds');
+  });
+
+  it('names a mistyped command, but not an argument that could be a token', () => {
+    expect(unknownCommandMessage('genrate')).toBe('Unknown command: genrate');
+    expect(unknownCommandMessage('--accessToken=pat123.secret')).toBe(
+      'Unknown command. Run easy-airtable-api --help to see the commands.'
+    );
+    expect(unknownCommandMessage('pat123.secret')).toBe(
+      'Unknown command. Run easy-airtable-api --help to see the commands.'
+    );
   });
 });

@@ -38,4 +38,14 @@ describe('single-record helpers', () => {
       expect(vi.mocked(airtableRequest)).not.toHaveBeenCalled();
     }
   );
+
+  it('encodes the record ID so its characters stay part of the path', async () => {
+    vi.mocked(airtableRequest).mockResolvedValueOnce({});
+
+    await getRecord({ ...target, recordId: 'rec1?x=1#y/z' });
+
+    expect(vi.mocked(airtableRequest).mock.calls[0][0].endpoint).toBe(
+      '/rec1%3Fx%3D1%23y%2Fz'
+    );
+  });
 });

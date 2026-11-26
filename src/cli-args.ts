@@ -1,11 +1,9 @@
+import {
+  CODEGEN_MODE_VALUES,
+  parseCodegenMode,
+  type CodegenModeOption,
+} from './codegen/options.js';
 import type { GenerateAirtableTypesOptions } from './codegen/types.js';
-
-const MODE_VALUES = {
-  '--enumMode': ['literal', 'hybrid', 'broad'],
-  '--schemaMode': ['read', 'write', 'full'],
-  '--createRequiredMode': ['allOptional', 'primaryField'],
-  '--unknownFieldBehavior': ['unknown', 'error'],
-} as const satisfies Record<string, readonly string[]>;
 
 const VALUE_FLAGS = new Set<string>([
   '--baseId',
@@ -14,33 +12,20 @@ const VALUE_FLAGS = new Set<string>([
   '--schemaPath',
   '--output',
   '--table',
-  ...Object.keys(MODE_VALUES),
+  ...Object.keys(CODEGEN_MODE_VALUES).map((option) => `--${option}`),
 ]);
 
 const SWITCH_FLAGS = new Set(['--noTableIds', '--noFieldIds']);
 
-type ModeFlag = keyof typeof MODE_VALUES;
-
-function isOneOf<Value extends string>(
-  allowed: readonly Value[],
-  value: string
-): value is Value {
-  return allowed.some((candidate) => candidate === value);
-}
-
-function readMode<Flag extends ModeFlag>(
-  flag: Flag,
-  value: string | undefined
-): (typeof MODE_VALUES)[Flag][number] | undefined {
-  if (value === undefined) return undefined;
-  const allowed: readonly (typeof MODE_VALUES)[Flag][number][] =
-    MODE_VALUES[flag];
-  if (!isOneOf(allowed, value)) {
-    throw new Error(
-      `Invalid value for ${flag}. Use one of: ${allowed.join(', ')}.`
-    );
-  }
-  return value;
+/**
+ * The error for a first argument that isn't a command. It names a word-like
+ * typo such as `genrate`, but not anything else, which could be a token passed
+ * before the command.
+ */
+export function unknownCommandMessage(command: string): string {
+  return /^[a-z][a-z-]*$/i.test(command)
+    ? `Unknown command: ${command}`
+    : 'Unknown command. Run easy-airtable-api --help to see the commands.';
 }
 
 /**
@@ -99,6 +84,9 @@ export function parseGenerateArgs(
     throw new Error('Pass --schemaPath or --baseId.');
   }
 
+  const readMode = <Option extends CodegenModeOption>(option: Option) =>
+    parseCodegenMode(option, values.get(`--${option}`), `--${option}`);
+
   // Options the caller didn't pass stay undefined, so codegen applies its
   // defaults.
   return {
@@ -111,16 +99,10 @@ export function parseGenerateArgs(
         },
     output: values.get('--output'),
     tableNameOrId: tables.length ? tables : undefined,
-    enumMode: readMode('--enumMode', values.get('--enumMode')),
-    schemaMode: readMode('--schemaMode', values.get('--schemaMode')),
-    createRequiredMode: readMode(
-      '--createRequiredMode',
-      values.get('--createRequiredMode')
-    ),
-    unknownFieldBehavior: readMode(
-      '--unknownFieldBehavior',
-      values.get('--unknownFieldBehavior')
-    ),
+    enumMode: readMode('enumMode'),
+    schemaMode: readMode('schemaMode'),
+    createRequiredMode: readMode('createRequiredMode'),
+    unknownFieldBehavior: readMode('unknownFieldBehavior'),
     includeTableIds: !switches.has('--noTableIds'),
     includeFieldIds: !switches.has('--noFieldIds'),
   };
