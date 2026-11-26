@@ -111,6 +111,18 @@ describe('retry timing', () => {
     expect(requestMock).toHaveBeenCalledTimes(1);
     expect(sleepMock).not.toHaveBeenCalled();
   });
+
+  it('fails without waiting when the 30-second lockout is longer than maxDelayMs', async () => {
+    requestMock
+      .mockImplementationOnce(respondWith(429, rateLimited))
+      .mockImplementationOnce(respondWith(200, ok));
+
+    await expect(get({ maxDelayMs: 1000 })).rejects.toMatchObject({
+      statusCode: 429,
+    });
+    expect(requestMock).toHaveBeenCalledTimes(1);
+    expect(sleepMock).not.toHaveBeenCalled();
+  });
 });
 
 describe('network error retries', () => {

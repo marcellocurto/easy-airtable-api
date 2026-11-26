@@ -94,8 +94,6 @@ describe('airtableRequest errors', () => {
   });
 
   it('retries a 429 response after the rate-limit lockout and returns the later success payload', async () => {
-    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.5);
-
     requestMock
       .mockImplementationOnce((options, callback) => {
         const response = new EventEmitter() as EventEmitter & {
@@ -161,25 +159,21 @@ describe('airtableRequest errors', () => {
         return req;
       });
 
-    try {
-      const result = await airtableRequest<{ id: string; createdTime: string; fields: { Name: string } }>({
-        apiKey: 'pat123',
-        baseId: 'app123',
-        tableId: 'tbl123',
-        endpoint: '/rec123',
-        method: 'GET',
-      });
+    const result = await airtableRequest<{ id: string; createdTime: string; fields: { Name: string } }>({
+      apiKey: 'pat123',
+      baseId: 'app123',
+      tableId: 'tbl123',
+      endpoint: '/rec123',
+      method: 'GET',
+    });
 
-      expect(result).toEqual({
-        id: 'rec123',
-        createdTime: '2024-01-01T00:00:00.000Z',
-        fields: { Name: 'Recovered' },
-      });
-      expect(requestMock).toHaveBeenCalledTimes(2);
-      expect(sleepMock).toHaveBeenCalledWith(30000);
-    } finally {
-      randomSpy.mockRestore();
-    }
+    expect(result).toEqual({
+      id: 'rec123',
+      createdTime: '2024-01-01T00:00:00.000Z',
+      fields: { Name: 'Recovered' },
+    });
+    expect(requestMock).toHaveBeenCalledTimes(2);
+    expect(sleepMock).toHaveBeenCalledWith(30000);
   });
 
   it('prefers Retry-After when Airtable rate limits a request', async () => {

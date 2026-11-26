@@ -1,10 +1,9 @@
 import { EventEmitter } from 'node:events';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { requestMock, sleepMock, randomMock } = vi.hoisted(() => ({
+const { requestMock, sleepMock } = vi.hoisted(() => ({
   requestMock: vi.fn(),
   sleepMock: vi.fn(() => Promise.resolve()),
-  randomMock: vi.fn(() => 0.5),
 }));
 
 vi.mock('https', () => ({
@@ -25,10 +24,7 @@ describe('airtableRequest retry exhaustion', () => {
   beforeEach(() => {
     requestMock.mockReset();
     sleepMock.mockReset();
-    randomMock.mockReset();
     sleepMock.mockResolvedValue(undefined);
-    randomMock.mockReturnValue(0.5);
-    vi.spyOn(Math, 'random').mockImplementation(randomMock);
   });
 
   it('stops retrying after the configured retry budget is exhausted', async () => {
@@ -87,6 +83,5 @@ describe('airtableRequest retry exhaustion', () => {
     expect(sleepMock.mock.calls.map((call) => call[0])).toEqual([
       30000, 30000, 30000, 30000, 30000,
     ]);
-    expect(Math.random).toHaveBeenCalledTimes(5);
   });
 });

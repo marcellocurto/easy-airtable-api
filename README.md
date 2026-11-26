@@ -332,7 +332,7 @@ How long the library waits between attempts:
 
 - Normal retries back off exponentially from `baseDelayMs`, capped at `maxDelayMs` (30 seconds by default).
 - After a `429`, Airtable rejects every request for 30 seconds, so the library waits at least that long before retrying. If the response has a `Retry-After` header, the library waits at least that long instead.
-- If the wait the server asks for is longer than `maxDelayMs`, the library doesn't retry. It throws the error right away, and the error's `retryAfterMs` says how long the server asked you to wait. With a `maxDelayMs` below 30 seconds, rate-limited requests therefore fail immediately.
+- If the wait the server asks for is longer than `maxDelayMs`, the library doesn't retry and throws the error right away. When the server sent a `Retry-After` header, the error's `retryAfterMs` holds it; a `429` without one means Airtable's 30-second lockout. With a `maxDelayMs` below 30 seconds, rate-limited requests therefore fail immediately.
 
 Network errors are retried when Node reports a connection failure: `ECONNRESET`, `ECONNREFUSED`, `ETIMEDOUT`, `EPIPE`, `ENETUNREACH`, `EHOSTUNREACH`, `EAI_AGAIN`, or `ENOTFOUND`.
 
