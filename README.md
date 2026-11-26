@@ -193,7 +193,7 @@ await generateAirtableTypes({
 
 ### Clearing fields
 
-Generated `UpdateFields` types accept `null` for every writable field, because Airtable clears a field when an update sends `null`. `CreateFields` types don't: leave a field out of a create instead.
+Generated `UpdateFields` types accept `null` for every writable field, because Airtable clears a field when an update sends `null`. We checked this against Airtable for every writable field type; a rich text field keeps a single empty line (`"\n"`). `CreateFields` types don't accept `null`: leave a field out of a create instead.
 
 ### Generated type assumptions
 
