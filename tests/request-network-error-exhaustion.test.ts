@@ -40,7 +40,10 @@ describe('airtableRequest network error exhaustion', () => {
 
       req.write = () => undefined;
       req.end = () => {
-        req.emit('error', new Error('socket hang up'));
+        req.emit(
+          'error',
+          Object.assign(new Error('socket hang up'), { code: 'ECONNRESET' })
+        );
       };
 
       return req;

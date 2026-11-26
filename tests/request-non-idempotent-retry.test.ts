@@ -51,7 +51,11 @@ function failConnection(message: string) {
     const req = new EventEmitter() as FakeRequest;
     req.write = () => undefined;
     req.end = () => {
-      req.emit('error', new Error(message));
+      // Node reports a dropped connection as ECONNRESET.
+      req.emit(
+        'error',
+        Object.assign(new Error(message), { code: 'ECONNRESET' })
+      );
     };
     return req;
   };
