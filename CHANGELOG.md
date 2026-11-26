@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.1
+
+### Fixed
+
+- 0.2.0 was published without its `lib/` folder, so importing the package failed. 0.2.1 contains the same code as 0.2.0, packaged correctly.
+- Release tarballs are no longer packed into the published package.
+
 ## 0.2.0
 
 ### Breaking changes
