@@ -124,4 +124,17 @@ describe('response status classification', () => {
       })
     ).resolves.toBeUndefined();
   });
+
+  it.each(['', '<html>Maintenance</html>'])(
+    'rejects a 200 whose body is not JSON (%j) with a parse error',
+    async (body) => {
+      requestMock.mockImplementationOnce(respondWith(200, body));
+
+      const error = await get().catch((caught) => caught);
+
+      expect(error).not.toBeInstanceOf(AirtableApiError);
+      expect(error.message).toMatch(/Failed to parse response as JSON/);
+      expect(requestMock).toHaveBeenCalledTimes(1);
+    }
+  );
 });

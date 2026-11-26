@@ -395,7 +395,6 @@ const STATUS_MESSAGES: Partial<Record<number, string>> = {
   413: 'Request body is too large.',
   422: 'Operation cannot be processed. Do the field names match?',
   429: 'Too many requests to the Airtable server.',
-  500: 'Airtable server error.',
   503: 'Airtable service unavailable.',
 };
 
@@ -442,9 +441,9 @@ function readAirtableError(
 }
 
 /**
- * Returns the parsed JSON body of a 2xx response, or undefined when the body is
- * empty, as in a 204. Any other status throws an AirtableApiError carrying the
- * status code, whatever the body contains.
+ * Returns the parsed JSON body of a 2xx response, or undefined for a 204 No
+ * Content. Any other status throws an AirtableApiError carrying the status
+ * code, whatever the body contains.
  */
 function parseResponse<T>(
   response: ApiResponse,
@@ -453,7 +452,7 @@ function parseResponse<T>(
   const { statusCode, body } = response;
 
   if (statusCode !== undefined && statusCode >= 200 && statusCode < 300) {
-    if (body === '') return undefined as T;
+    if (statusCode === 204) return undefined as T;
 
     try {
       return JSON.parse(body) as T;
