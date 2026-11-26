@@ -73,6 +73,7 @@ describe('iterateRecordsPages', () => {
       tableId: 'tbl123',
       endpoint: '/listRecords',
       method: 'POST',
+      idempotent: true,
       body: {
         pageSize: 1,
       },
@@ -84,6 +85,7 @@ describe('iterateRecordsPages', () => {
       tableId: 'tbl123',
       endpoint: '/listRecords',
       method: 'POST',
+      idempotent: true,
       body: {
         pageSize: 1,
         offset: 'next-page-token',
