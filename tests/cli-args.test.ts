@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseGenerateArgs } from '../src/cli-args.js';
+import {
+  parseCliArgs,
+  parseGenerateArgs,
+  unknownCommandMessage,
+} from '../src/cli-args.js';
 
 describe('parseGenerateArgs', () => {
   it('reads every option, in both --flag value and --flag=value form', () => {
@@ -47,7 +51,7 @@ describe('parseGenerateArgs', () => {
     expect(() =>
       parseGenerateArgs(['--schemaPath', 's.json', '--schemaMode', 'reed'])
     ).toThrow(
-      'Invalid value for --schemaMode. Use one of: read, write, full.'
+      /^Invalid value for --schemaMode\. Use one of: read, write, full\.$/
     );
   });
 
@@ -101,5 +105,37 @@ describe('parseGenerateArgs', () => {
     expect(() =>
       parseGenerateArgs(['--schemaPath', 's.json', '--noTableIds=x'])
     ).toThrow('Unknown option: --noTableIds');
+  });
+
+  it('names a mistyped command, but not an argument that could be a token', () => {
+    expect(unknownCommandMessage('genrate')).toBe('Unknown command: genrate');
+    expect(unknownCommandMessage('--accessToken=pat123.secret')).toBe(
+      'Unknown command. Run easy-airtable-api --help to see the commands.'
+    );
+    expect(unknownCommandMessage('pat123.secret')).toBe(
+      'Unknown command. Run easy-airtable-api --help to see the commands.'
+    );
+  });
+});
+
+describe('parseCliArgs', () => {
+  it('asks for help with no command or with --help anywhere', () => {
+    expect(parseCliArgs([])).toEqual({ command: 'help' });
+    expect(parseCliArgs(['generate', '--help'])).toEqual({ command: 'help' });
+  });
+
+  it('reads generate options', () => {
+    expect(parseCliArgs(['generate', '--schemaPath', 's.json'])).toMatchObject({
+      command: 'generate',
+      options: { source: { schemaPath: 's.json' } },
+    });
+  });
+
+  it('rejects an unknown command without repeating an argument that could be a token', () => {
+    expect(() =>
+      parseCliArgs(['--accessToken=pat123.secret', 'generate'])
+    ).toThrow(
+      /^Unknown command\. Run easy-airtable-api --help to see the commands\.$/
+    );
   });
 });

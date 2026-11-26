@@ -2,6 +2,7 @@ import type { AirtableCodegenResult, GenerateAirtableTypesOptions } from './type
 import { emitTypeScript } from './emit-typescript.js';
 import { loadSchema } from './load-schema.js';
 import { normalizeSchema } from './normalize-schema.js';
+import { parseCodegenMode } from './options.js';
 
 export async function buildAirtableTypes(
   options: Omit<GenerateAirtableTypesOptions, 'output'>
@@ -9,13 +10,18 @@ export async function buildAirtableTypes(
   const {
     source,
     tableNameOrId,
-    enumMode = 'hybrid',
-    createRequiredMode = 'allOptional',
-    unknownFieldBehavior = 'unknown',
     includeTableIds = true,
     includeFieldIds = true,
-    schemaMode = 'full',
   } = options;
+  const enumMode = parseCodegenMode('enumMode', options.enumMode) ?? 'hybrid';
+  const createRequiredMode =
+    parseCodegenMode('createRequiredMode', options.createRequiredMode) ??
+    'allOptional';
+  const unknownFieldBehavior =
+    parseCodegenMode('unknownFieldBehavior', options.unknownFieldBehavior) ??
+    'unknown';
+  const schemaMode =
+    parseCodegenMode('schemaMode', options.schemaMode) ?? 'full';
 
   const schema = await loadSchema(source);
   const { normalizedBase, warnings } = normalizeSchema({

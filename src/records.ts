@@ -8,20 +8,28 @@ import {
   GetRecordsQueryParameters,
 } from './types/records.js';
 import { DEFAULT_REQUEST_INTERVAL_MS, sendInChunks } from './batches.js';
-import { appendQueryToEndpoint, airtableRequest } from './requests.js';
+import {
+  AirtableApiError,
+  appendQueryToEndpoint,
+  airtableRequest,
+  encodePathSegment,
+} from './requests.js';
 import type { AirtableRetryOptions } from './requests.js';
 import { delay } from './utils.js';
 
 /**
- * An empty ID would turn `/{recordId}` into the table's list endpoint, so the
- * single-record helpers check it before sending anything.
+ * The path segment for one record. An empty ID would turn the path into the
+ * table's list endpoint, so it is rejected before anything is sent;
+ * `encodePathSegment` rejects `.` and `..` and encodes every other character,
+ * so it stays part of the ID.
  */
-function requireRecordId(recordId: string) {
+function recordPath(recordId: string): string {
   if (!recordId) {
     throw new Error(
       'Record ID is not set. Please provide a valid Airtable record ID.'
     );
   }
+  return `/${encodePathSegment(recordId, 'Record ID')}`;
 }
 
 export function getRecord<Fields>({
@@ -69,8 +77,7 @@ export async function getRecord<Fields>({
   options?: GetRecordQueryParameters;
   retry?: AirtableRetryOptions;
 }): Promise<AirtableRecord<Fields>> {
-  requireRecordId(recordId);
-  const endpoint = appendQueryToEndpoint(`/${recordId}`, {
+  const endpoint = appendQueryToEndpoint(recordPath(recordId), {
     cellFormat: options?.cellFormat,
     returnFieldsByFieldId: options?.returnFieldsByFieldId,
   });
@@ -325,12 +332,11 @@ export async function updateRecord<Fields>({
   };
   retry?: AirtableRetryOptions;
 }): Promise<AirtableRecord<Fields>> {
-  requireRecordId(recordId);
   return await airtableRequest<AirtableRecord<Fields>>({
     apiKey,
     baseId,
     tableId,
-    endpoint: `/${recordId}`,
+    endpoint: recordPath(recordId),
     method: options?.overwriteFieldsNotSpecified === true ? 'PUT' : 'PATCH',
     body: {
       fields,
@@ -362,12 +368,11 @@ export async function replaceRecord<Fields>({
   };
   retry?: AirtableRetryOptions;
 }): Promise<AirtableRecord<Fields>> {
-  requireRecordId(recordId);
   return await airtableRequest<AirtableRecord<Fields>>({
     apiKey,
     baseId,
     tableId,
-    endpoint: `/${recordId}`,
+    endpoint: recordPath(recordId),
     method: 'PUT',
     body: {
       fields,
@@ -558,15 +563,32 @@ export async function deleteRecord({
   recordId: string;
   retry?: AirtableRetryOptions;
 }): Promise<DeleteRecordResponse> {
-  requireRecordId(recordId);
-  return await airtableRequest<DeleteRecordResponse>({
-    apiKey,
-    baseId,
-    tableId,
-    endpoint: `/${recordId}`,
-    method: 'DELETE',
-    retry,
-  });
+  try {
+    return await airtableRequest<DeleteRecordResponse>({
+      apiKey,
+      baseId,
+      tableId,
+      endpoint: recordPath(recordId),
+      method: 'DELETE',
+      retry,
+    });
+  } catch (error) {
+    if (isGoneAfterRetry(error)) return { id: recordId, deleted: true };
+    throw error;
+  }
+}
+
+/**
+ * A delete is retried when an earlier attempt failed in a way that may have
+ * applied it, such as a dropped connection. If the retry then finds the record
+ * gone with a 404, that earlier attempt deleted it.
+ */
+function isGoneAfterRetry(error: unknown): boolean {
+  return (
+    error instanceof AirtableApiError &&
+    error.statusCode === 404 &&
+    error.earlierAttemptMayHaveApplied === true
+  );
 }
 
 export async function deleteRecords({

@@ -78,7 +78,11 @@ function emitInterface({
       .map((field) => getFieldTypeForKind(field, kind))
       .filter((type): type is string => Boolean(type));
 
-    const propertyType = unionTypes(propertyTypes);
+    // Airtable clears a field when an update sends null for it.
+    const propertyType =
+      kind === 'update'
+        ? `${unionTypes(propertyTypes)} | null`
+        : unionTypes(propertyTypes);
     const isRequired =
       kind === 'create' &&
       grouped.some((field) =>
