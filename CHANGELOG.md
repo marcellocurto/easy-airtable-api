@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.2.0
+
+### Breaking changes
+
+- Requires Node.js 20 or later.
+- Every request that Airtable or the network fails for good throws `AirtableApiError`, connection failures included (`statusCode` unset, Node's error as `cause`). Errors gain `attempts` and `earlierAttemptMayHaveApplied`, and `retryable` now means resending is safe: a create that failed after a 5xx or a dropped connection reports `false`.
+- Creates are no longer resent after a 5xx or a dropped connection. They are still retried after a 429 or when the connection never opened, and updates, deletes, and reads still retry.
+- When a later chunk of a batch helper fails, it throws `AirtableBatchError` with `completed`, `pending`, and the original error as `cause`.
+- `maxDelayMs` defaults to 30 seconds. A server-requested wait longer than `maxDelayMs` now fails immediately instead of sleeping.
+- `requestInterval: 0` means no pause, and record pagination now pauses between pages (500 ms by default).
+- Generated `UpdateFields` accept `null`, generated files import only the shared types they use, and colliding type names get stable suffixes.
+- The CLI rejects unknown options and invalid values. The unused codegen `format` option is removed.
+
+### Added
+
+- `retry.timeoutMs` to set the socket inactivity timeout.
+- `AirtableBatchError`, exported from the package root.
+
+### Fixed
+
+- Text with multi-byte characters was corrupted when a character spanned two response chunks.
+- Requests hung forever when the connection dropped mid-response.
+- 429 retries now wait out Airtable's 30-second lockout.
+- Every 5xx is retried. Error responses that aren't JSON keep their status code, and a 204 resolves to `undefined`.
+- Network errors are recognized by Node's error code, so timeouts and DNS failures are retried.
+- `apiURL` honors its protocol, port, and IPv6 hosts.
+- `deleteRecord` retried after a 5xx or a dropped connection treats a 404 as success, since the earlier attempt deleted the record.
+- Record, base, and table IDs are URL-encoded; empty IDs and `.` or `..` are rejected.
+- Codegen types sync source fields correctly, and table names can no longer inject code through the generated comments.
+
 ## 0.1.0
 
 - Exported a broader canonical public field/value type surface, including shared types used by generated code such as `AICell`, `BarcodeCell`, `BarcodeWrite`, `ButtonCell`, and `CollaboratorWrite`.
