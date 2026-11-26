@@ -130,9 +130,19 @@ export async function getRecordsPage<Fields>({
     tableId,
     endpoint: '/listRecords',
     method: 'POST',
-    body: options,
+    body: options && toListRecordsBody(options),
     retry,
   });
+}
+
+/**
+ * `requestInterval` only paces this library's page requests, so it is removed
+ * before the options are sent to Airtable as list-records parameters.
+ */
+function toListRecordsBody(options: GetRecordsQueryParameters) {
+  const body = { ...options };
+  delete body.requestInterval;
+  return body;
 }
 
 export function iterateRecordsPages<Fields>({
@@ -203,7 +213,7 @@ export async function* iterateRecordsPages<Fields>({
     yield response;
     currentOffset = response.offset;
 
-    if (currentOffset && (options?.maxRecords ?? 100) > 100) {
+    if (currentOffset) {
       const interval: number = options?.requestInterval || 500;
       await delay(interval);
     }

@@ -1,5 +1,5 @@
-import { request, RequestOptions } from 'https';
-import { IncomingMessage } from 'http';
+import { IncomingMessage, request as httpRequest } from 'http';
+import { request as httpsRequest, RequestOptions } from 'https';
 import { URL } from 'url';
 import { ApiRequest, RequestMethods } from './types/tables.js';
 import { delay } from './utils.js';
@@ -515,12 +515,15 @@ async function apiRequest<T>({
   body,
 }: ApiRequest): Promise<ApiResponse<T>> {
   return new Promise<ApiResponse<T>>((resolve, reject) => {
-    const parsedUrl = new URL(url);
-    const { hostname, pathname, search } = parsedUrl;
+    const { protocol, hostname, port, pathname, search } = new URL(url);
+    // A custom apiURL can point at a plain-HTTP proxy or mock server on any
+    // port, so both come from the URL rather than defaulting to HTTPS on 443.
+    const send = protocol === 'http:' ? httpRequest : httpsRequest;
 
     const options: RequestOptions = {
       method,
       hostname,
+      port: port || undefined,
       path: `${pathname}${search}`,
       timeout: 300000,
       headers: {
@@ -529,7 +532,7 @@ async function apiRequest<T>({
       },
     };
 
-    const req = request(options, (res: IncomingMessage) => {
+    const req = send(options, (res: IncomingMessage) => {
       let data = '';
 
       res.on('data', (chunk: Buffer) => {
