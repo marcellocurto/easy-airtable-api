@@ -1,5 +1,6 @@
 export { getRecord, getRecordsPage, iterateRecordsPages, getRecords, createRecord, createRecords, updateRecord, replaceRecord, updateRecords, replaceRecords, updateRecordsUpsert, deleteRecord, deleteRecords, } from './records.js';
 export { listBases, createBase, getBaseSchema } from './bases.js';
+export { AirtableBatchError } from './batches.js';
 export { airtableRequestRaw, AirtableApiError } from './requests.js';
 export type { AirtableRetryOptions } from './requests.js';
 export type { AirtableRecord, GeneratedRecordFieldsCompatibleGetRecordOptions, GeneratedRecordFieldsCompatibleGetRecordsOptions, } from './types/records.js';

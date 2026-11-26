@@ -480,12 +480,38 @@ await deleteRecords({
 });
 ```
 
+### When a batch fails partway
+
+`createRecords`, `updateRecords`, `replaceRecords`, `updateRecordsUpsert`, and `deleteRecords` send records in chunks of 10. If a chunk fails after earlier chunks succeeded, Airtable has already applied those earlier chunks. The helper then throws an `AirtableBatchError` that tells you what happened:
+
+- `completed` holds what Airtable confirmed, in the helper's usual result shape.
+- `pending` holds the inputs Airtable did not confirm, starting with the chunk that failed.
+- `cause` holds the original error.
+
+```ts
+import { AirtableBatchError, createRecords } from 'easy-airtable-api';
+
+try {
+  await createRecords({ apiKey, baseId, tableId, records });
+} catch (error) {
+  if (error instanceof AirtableBatchError) {
+    console.log('Created before the failure:', error.completed);
+    console.log('Not confirmed:', error.pending.length, 'records');
+    console.log('Cause:', error.cause);
+  }
+  throw error;
+}
+```
+
+When the first chunk fails, nothing was written, so the helper throws the original error instead.
+
 ## Exports
 
 Runtime package:
 
 ```ts
 import {
+  AirtableBatchError,
   airtableRequestRaw,
   createBase,
   createRecord,

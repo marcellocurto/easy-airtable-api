@@ -1,4 +1,5 @@
 import type { AirtableBaseSchema } from '../types/metadata.js';
+import type { TableTypeNames } from './type-names.js';
 
 export type AirtableSchemaSource =
   | {
@@ -52,6 +53,8 @@ export interface NormalizedTable {
   name: string;
   tsName: string;
   tsConstKey: string;
+  /** Unique names of the table's exported record and field interfaces. */
+  typeNames: TableTypeNames;
   primaryFieldId: string;
   fields: NormalizedField[];
 }

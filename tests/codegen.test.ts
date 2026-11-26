@@ -234,6 +234,34 @@ describe('Airtable codegen', () => {
     });
   });
 
+  it('gives every generated type a unique name when tables, fields, and imports collide', async () => {
+    const schema = await loadFixture('type-name-collisions-schema.json');
+
+    const result = await buildAirtableTypes({
+      source: { schema },
+      enumMode: 'hybrid',
+    });
+
+    const exportedNames = [
+      ...result.content.matchAll(/^export (?:type|interface|const) (\w+)/gm),
+    ].map((match) => match[1]);
+    expect(new Set(exportedNames).size).toBe(exportedNames.length);
+
+    // Table types keep their plain names; colliding select aliases are renamed.
+    expect(result.content).toContain(
+      'export type ProjectRecord = AirtableRecord<ProjectRecordFields>;'
+    );
+    expect(result.content).toContain(
+      'export type ProjectTaskStatus = "Open" | "Done" | (string & {});'
+    );
+    const collisionWarnings = result.warnings.filter((warning) =>
+      warning.includes('collides with')
+    );
+    expect(collisionWarnings).toHaveLength(3);
+
+    await compileGeneratedOutput({ generatedContent: result.content });
+  });
+
   it('resolves sanitized name collisions and can generate from a schema file', async () => {
     const tempDirectory = await mkdtemp(join(tmpdir(), 'easy-airtable-api-'));
     const output = join(tempDirectory, 'airtable.generated.ts');

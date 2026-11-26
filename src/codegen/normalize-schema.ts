@@ -6,6 +6,7 @@ import {
   toSafeConstKey,
 } from './identifiers.js';
 import { mapFieldToNormalizedField } from './map-field.js';
+import { createTypeNameRegistry, type TableTypeNames } from './type-names.js';
 import type {
   EnumMode,
   NormalizedBase,
@@ -54,7 +55,37 @@ export function normalizeSchema({
   const tableTypeNameCounts = countBy(selectedTables, (table) => toPascalCase(table.name));
   const tableConstKeyCounts = countBy(selectedTables, (table) => toSafeConstKey(table.name));
 
-  const tables: NormalizedTable[] = selectedTables.map((table) => {
+  const claimTypeName = createTypeNameRegistry();
+  const claimUniqueTypeName = (
+    wanted: string,
+    ownerId: string,
+    owner: string
+  ): string => {
+    const name = claimTypeName(wanted, ownerId);
+    if (name !== wanted) {
+      warnings.push(
+        `Generated type name ${wanted} for ${owner} collides with another generated or imported type. It is emitted as ${name}.`
+      );
+    }
+    return name;
+  };
+
+  // Every table claims its interface names before any select alias does, so
+  // table types keep their plain names and the aliases take the suffixes.
+  const tableTypeNames: TableTypeNames[] = selectedTables.map((table) => {
+    const tsName = tableNames.get(table.id) ?? table.name;
+    const claim = (suffix: string) =>
+      claimUniqueTypeName(`${tsName}${suffix}`, table.id, table.name);
+
+    return {
+      recordFields: claim('RecordFields'),
+      record: claim('Record'),
+      createFields: claim('CreateFields'),
+      updateFields: claim('UpdateFields'),
+    };
+  });
+
+  const tables: NormalizedTable[] = selectedTables.map((table, tableIndex) => {
     const tsName = tableNames.get(table.id) ?? table.name;
     const tsConstKey = tableConstKeys.get(table.id) ?? table.name;
 
@@ -79,7 +110,7 @@ export function normalizeSchema({
     const fields = table.fields.map((field) => {
       const fieldTsName = fieldNames.get(field.id) ?? field.name;
       const fieldTsConstKey = fieldConstKeys.get(field.id) ?? field.name;
-      const normalizedField = mapFieldToNormalizedField({
+      const mappedField = mapFieldToNormalizedField({
         field,
         enumMode,
         unknownFieldBehavior,
@@ -87,6 +118,16 @@ export function normalizeSchema({
         tsConstKey: fieldTsConstKey,
         tsTypeName: `${tsName}${fieldTsName}`,
       });
+      const normalizedField = mappedField.enumTypeAlias
+        ? {
+            ...mappedField,
+            tsTypeName: claimUniqueTypeName(
+              mappedField.tsTypeName,
+              field.id,
+              `${table.name}.${field.name}`
+            ),
+          }
+        : mappedField;
 
       if ((exactFieldNameCounts.get(field.name) ?? 0) > 1) {
         warnings.push(
@@ -115,6 +156,7 @@ export function normalizeSchema({
       name: table.name,
       tsName,
       tsConstKey,
+      typeNames: tableTypeNames[tableIndex],
       primaryFieldId: table.primaryFieldId,
       fields,
     };
