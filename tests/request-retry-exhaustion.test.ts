@@ -83,12 +83,9 @@ describe('airtableRequest retry exhaustion', () => {
 
     expect(requestMock).toHaveBeenCalledTimes(6);
     expect(sleepMock).toHaveBeenCalledTimes(5);
+    // Each retry waits out Airtable's 30-second rate-limit lockout.
     expect(sleepMock.mock.calls.map((call) => call[0])).toEqual([
-      250,
-      500,
-      1000,
-      2000,
-      4000,
+      30000, 30000, 30000, 30000, 30000,
     ]);
     expect(Math.random).toHaveBeenCalledTimes(5);
   });

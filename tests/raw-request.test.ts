@@ -306,7 +306,7 @@ describe('airtableRequestRaw', () => {
 
       expect(result).toEqual({ ok: true });
       expect(requestMock).toHaveBeenCalledTimes(2);
-      expect(sleepMock).toHaveBeenCalledWith(250);
+      expect(sleepMock).toHaveBeenCalledWith(30000);
     } finally {
       randomSpy.mockRestore();
     }

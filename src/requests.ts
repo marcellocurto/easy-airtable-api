@@ -24,7 +24,8 @@ export type AirtableRetryOptions = {
 const DEFAULT_RETRY_OPTIONS: Required<AirtableRetryOptions> = {
   maxRetries: 5,
   baseDelayMs: 500,
-  maxDelayMs: 8000,
+  // Long enough to wait out Airtable's 30-second rate-limit lockout.
+  maxDelayMs: 30000,
   retryOn429: true,
   retryOn5xx: true,
   retryOnNetworkErrors: true,
@@ -119,6 +120,12 @@ function shouldRetryError(
     return false;
   }
 
+  // When the server needs a longer wait than the caller allows, a retry would
+  // either sleep past the caller's limit or arrive too early to succeed.
+  if (requiredWaitMs(error) > retryOptions.maxDelayMs) {
+    return false;
+  }
+
   if (error.statusCode === 429) {
     return retryOptions.retryOn429;
   }
@@ -130,17 +137,45 @@ function shouldRetryError(
   return false;
 }
 
+// Node system error codes for connection failures that a later attempt can
+// get past: the connection was refused, reset, or timed out, the network was
+// unreachable, or DNS was briefly unavailable.
+const RETRYABLE_NETWORK_ERROR_CODES = new Set([
+  'ECONNREFUSED',
+  'ECONNRESET',
+  'EPIPE',
+  'ETIMEDOUT',
+  'ENETUNREACH',
+  'EHOSTUNREACH',
+  'EAI_AGAIN',
+  'ENOTFOUND',
+]);
+
+/**
+ * Checks the Node error that `apiRequest` keeps as `cause`. Matching on its
+ * code rather than message text keeps a response body that happens to mention
+ * "network" from being mistaken for a connection failure.
+ */
 function isRetryableNetworkError(error: unknown): boolean {
   if (!(error instanceof Error)) return false;
 
-  const message = error.message.toLowerCase();
+  const { cause } = error;
   return (
-    message.includes('socket hang up') ||
-    message.includes('timed out') ||
-    message.includes('econnreset') ||
-    message.includes('econnrefused') ||
-    message.includes('network')
+    cause instanceof Error &&
+    'code' in cause &&
+    typeof cause.code === 'string' &&
+    RETRYABLE_NETWORK_ERROR_CODES.has(cause.code)
   );
+}
+
+// After a 429, Airtable rejects every request for 30 seconds.
+// https://airtable.com/developers/web/api/rate-limits
+const RATE_LIMIT_LOCKOUT_MS = 30000;
+
+/** The shortest wait after which the server says a retry can succeed. */
+function requiredWaitMs(error: AirtableApiError): number {
+  if (error.retryAfterMs !== undefined) return error.retryAfterMs;
+  return error.statusCode === 429 ? RATE_LIMIT_LOCKOUT_MS : 0;
 }
 
 function getRetryDelayMs(
@@ -148,20 +183,15 @@ function getRetryDelayMs(
   attempt: number,
   retryOptions: Required<AirtableRetryOptions>
 ): number {
-  if (error.retryAfterMs !== undefined) {
-    return error.retryAfterMs;
-  }
-
   const cappedDelay = Math.min(
     retryOptions.baseDelayMs * 2 ** attempt,
     retryOptions.maxDelayMs
   );
+  const backoff = retryOptions.useJitter
+    ? Math.round(Math.random() * cappedDelay)
+    : cappedDelay;
 
-  if (!retryOptions.useJitter) {
-    return cappedDelay;
-  }
-
-  return Math.round(Math.random() * cappedDelay);
+  return Math.max(backoff, requiredWaitMs(error));
 }
 
 function parseRetryAfterMs(value: string | string[] | undefined): number | undefined {
@@ -552,16 +582,24 @@ async function apiRequest<T>({
 
     // Node only reports an idle socket; without destroying the request here,
     // a server that stops answering leaves this promise pending forever. The
-    // "timed out" message is what marks the error as retryable.
+    // ETIMEDOUT code is what marks the error as retryable.
     req.on('timeout', () => {
       req.destroy(
-        new Error(`Request timed out after ${options.timeout} ms of inactivity`)
+        Object.assign(
+          new Error(
+            `Request timed out after ${options.timeout} ms of inactivity`
+          ),
+          { code: 'ETIMEDOUT' }
+        )
       );
     });
 
+    // The original error stays as `cause` so retries can read its Node code.
     req.on('error', (error: Error) => {
       reject(
-        new Error(`airtableApi: ${error.message} (fn_${apiRequest.name})`)
+        new Error(`airtableApi: ${error.message} (fn_${apiRequest.name})`, {
+          cause: error,
+        })
       );
     });
 

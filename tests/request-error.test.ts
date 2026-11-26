@@ -93,7 +93,7 @@ describe('airtableRequest errors', () => {
     });
   });
 
-  it('retries a 429 response with jittered backoff and returns the later success payload', async () => {
+  it('retries a 429 response after the rate-limit lockout and returns the later success payload', async () => {
     const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.5);
 
     requestMock
@@ -176,7 +176,7 @@ describe('airtableRequest errors', () => {
         fields: { Name: 'Recovered' },
       });
       expect(requestMock).toHaveBeenCalledTimes(2);
-      expect(sleepMock).toHaveBeenCalledWith(250);
+      expect(sleepMock).toHaveBeenCalledWith(30000);
     } finally {
       randomSpy.mockRestore();
     }
