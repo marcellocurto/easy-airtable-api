@@ -12,15 +12,16 @@ import {
   AirtableApiError,
   appendQueryToEndpoint,
   airtableRequest,
+  encodePathSegment,
 } from './requests.js';
 import type { AirtableRetryOptions } from './requests.js';
 import { delay } from './utils.js';
 
 /**
  * The path segment for one record. An empty ID would turn the path into the
- * table's list endpoint, and URL parsing collapses `.` and `..` into a
- * different path, so those are rejected before anything is sent. Every other
- * character is encoded, so it stays part of the ID.
+ * table's list endpoint, so it is rejected before anything is sent;
+ * `encodePathSegment` rejects `.` and `..` and encodes every other character,
+ * so it stays part of the ID.
  */
 function recordPath(recordId: string): string {
   if (!recordId) {
@@ -28,10 +29,7 @@ function recordPath(recordId: string): string {
       'Record ID is not set. Please provide a valid Airtable record ID.'
     );
   }
-  if (recordId === '.' || recordId === '..') {
-    throw new Error('Record ID must not be "." or "..".');
-  }
-  return `/${encodeURIComponent(recordId)}`;
+  return `/${encodePathSegment(recordId, 'Record ID')}`;
 }
 
 export function getRecord<Fields>({

@@ -1,4 +1,4 @@
-import { airtableApiRequest } from './requests.js';
+import { airtableApiRequest, encodePathSegment } from './requests.js';
 import type { AirtableRetryOptions } from './requests.js';
 import type {
   CreateBaseRequestBody,
@@ -62,7 +62,7 @@ export async function getBaseSchema({
     );
   }
 
-  const path = `/meta/bases/${encodeURIComponent(baseId)}/tables`;
+  const path = `/meta/bases/${encodePathSegment(baseId, 'Base ID')}/tables`;
 
   return airtableApiRequest<AirtableBaseSchema>({
     apiKey,

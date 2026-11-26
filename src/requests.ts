@@ -280,6 +280,19 @@ export function buildQueryString(
   return params.toString();
 }
 
+/**
+ * Encodes one ID for a request path. URL parsing collapses `.` and `..`
+ * segments, which would send the request to a different Airtable path with the
+ * caller's token, so those are rejected before anything is sent. `name` labels
+ * the ID in the error, such as "Table ID".
+ */
+export function encodePathSegment(value: string, name: string): string {
+  if (value === '.' || value === '..') {
+    throw new Error(`${name} must not be "." or "..".`);
+  }
+  return encodeURIComponent(value);
+}
+
 export function appendQueryToEndpoint(
   endpoint: string,
   query: Record<string, AirtableQueryValue>
@@ -322,9 +335,11 @@ export async function airtableApiRequest<T>(request: {
   /**
    * Whether sending this request twice has the same effect as sending it
    * once. Defaults to true for every method except POST. A request that is not
-   * safe to repeat is not resent after a 5xx or a dropped connection, because
-   * Airtable may already have applied it. It is still retried after a 429,
-   * which the library treats as a request Airtable did not process.
+   * safe to repeat is not resent after a 5xx or a connection that dropped after
+   * sending, because Airtable may already have applied it. It is still retried
+   * after a 429, which the library treats as a request Airtable did not
+   * process, and after a connection that never opened (for example
+   * ECONNREFUSED or ENOTFOUND).
    */
   idempotent?: boolean;
   requestContext?: RequestContext;
@@ -463,7 +478,7 @@ export async function airtableRequest<T>(request: {
     method,
     body,
     apiURL,
-    path: `/${encodeURIComponent(baseId)}/${encodeURIComponent(tableId)}${endpoint}`,
+    path: `/${encodePathSegment(baseId, 'Base ID')}/${encodePathSegment(tableId, 'Table ID')}${endpoint}`,
     retry,
     idempotent,
     requestContext: {
