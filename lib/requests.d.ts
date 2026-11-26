@@ -46,12 +46,7 @@ export declare function airtableApiRequest<T>(request: {
     body?: unknown;
     apiURL?: string;
     retry?: AirtableRetryOptions;
-    requestContext?: {
-        method: string;
-        baseId?: string;
-        tableId?: string;
-        path?: string;
-    };
+    requestContext?: RequestContext;
 }): Promise<T>;
 export declare function airtableRequestRaw<T = unknown>(request: {
     apiKey: string;
@@ -72,3 +67,10 @@ export declare function airtableRequest<T>(request: {
     apiURL?: string;
     retry?: AirtableRetryOptions;
 }): Promise<T>;
+type RequestContext = {
+    method: string;
+    baseId?: string;
+    tableId?: string;
+    path?: string;
+};
+export {};
