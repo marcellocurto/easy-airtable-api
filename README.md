@@ -317,7 +317,7 @@ const records = await getRecords({
   retry: {
     maxRetries: 2,
     baseDelayMs: 250,
-    maxDelayMs: 1000,
+    maxDelayMs: 30000,
     retryOn429: true,
     retryOn5xx: true,
     retryOnNetworkErrors: true,
@@ -327,6 +327,16 @@ const records = await getRecords({
 ```
 
 The same `retry` option is supported by metadata helpers such as `listBases()` / `getBaseSchema()` and by `airtableRequestRaw()`.
+
+How long the library waits between attempts:
+
+- Normal retries back off exponentially from `baseDelayMs`, capped at `maxDelayMs` (30 seconds by default).
+- After a `429`, Airtable rejects every request for 30 seconds, so the library waits at least that long before retrying. If the response has a `Retry-After` header, the library waits at least that long instead.
+- If the wait the server asks for is longer than `maxDelayMs`, the library doesn't retry and throws the error right away. When the server sent a `Retry-After` header, the error's `retryAfterMs` holds it; a `429` without one leaves `retryAfterMs` unset, and Airtable's lockout is 30 seconds. With a `maxDelayMs` below 30 seconds, rate-limited requests therefore fail immediately.
+
+Network errors are retried when Node reports a connection failure: `ECONNRESET`, `ECONNREFUSED`, `ETIMEDOUT`, `EPIPE`, `ENETUNREACH`, `EHOSTUNREACH`, `EAI_AGAIN`, or `ENOTFOUND`.
+
+Requests that create something, such as `createRecord()`, `createRecords()`, `createBase()`, and `POST` requests sent with `airtableRequestRaw()`, are retried only after a `429` rate limit. Airtable may already have created the records when it returns a `5xx` or the connection drops, so the library does not send those requests again. Instead it throws the error, and you can check whether the records exist before trying again. Reads, updates, upserts, and deletes are retried as configured, including `getRecords()`, which uses `POST` to list records.
 
 ## Runtime examples
 
