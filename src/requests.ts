@@ -523,7 +523,7 @@ async function apiRequest<T>({
     const options: RequestOptions = {
       method,
       hostname,
-      port: port || undefined,
+      port,
       path: `${pathname}${search}`,
       timeout: 300000,
       headers: {

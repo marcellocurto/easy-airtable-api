@@ -64,4 +64,14 @@ describe('getRecords page interval', () => {
       pageSize: 50,
     });
   });
+
+  it('waits 500 ms between pages by default', async () => {
+    vi.mocked(airtableRequest)
+      .mockResolvedValueOnce(page('rec1', 'page2'))
+      .mockResolvedValueOnce(page('rec2'));
+
+    await getRecords({ apiKey: 'pat123', baseId: 'app123', tableId: 'tbl123' });
+
+    expect(sleepMock.mock.calls.map((call) => call[0])).toEqual([500]);
+  });
 });
