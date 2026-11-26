@@ -10,5 +10,9 @@ export interface TableTypeNames {
  * Hands out the exported type names of one generated file. The imported shared
  * types are taken from the start, and a name that is already taken gets a
  * stable suffix from the owning table or field ID, so the file always compiles.
+ * `alwaysSuffix` suffixes the name even when it is free, for owners that share
+ * a wanted name and so must not depend on who claims first.
  */
-export declare function createTypeNameRegistry(): (name: string, ownerId: string) => string;
+export declare function createTypeNameRegistry(): (name: string, ownerId: string, { alwaysSuffix }?: {
+    alwaysSuffix?: boolean | undefined;
+}) => string;

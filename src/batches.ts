@@ -1,4 +1,4 @@
-import { delay } from './utils.js';
+import { delay, getErrorMessage } from './utils.js';
 
 /** Airtable accepts at most 10 records per create, update, or delete request. */
 const BATCH_SIZE = 10;
@@ -8,9 +8,11 @@ const DEFAULT_REQUEST_INTERVAL_MS = 500;
 /**
  * Thrown by the batch helpers when a request fails after earlier requests in
  * the same call succeeded. Airtable has already applied the earlier chunks, so
- * `completed` holds what it confirmed, in the helper's usual result shape, and
+ * `completed` holds what it confirmed, in the helper's usual result shape.
  * `pending` holds the inputs it did not confirm, starting with the failed
- * chunk. The original error is `cause`.
+ * chunk, which Airtable may still have applied after a 5xx or a dropped
+ * connection. `cause` is the original error, such as an AirtableApiError with
+ * its `statusCode` and `retryable`.
  */
 export class AirtableBatchError<
   Completed = unknown,
@@ -18,6 +20,9 @@ export class AirtableBatchError<
 > extends Error {
   readonly completed: Completed;
   readonly pending: Pending[];
+  // Declared so `cause` is typed even where the consumer's lib predates ES2022.
+  // `declare` keeps the class-field emit from overwriting what `super` set.
+  declare readonly cause: unknown;
 
   constructor({
     message,
@@ -40,8 +45,8 @@ export class AirtableBatchError<
 /**
  * Sends `items` in Airtable-sized chunks, one request at a time, waiting
  * `requestInterval` between requests. A failure on the first chunk rethrows the
- * original error, because nothing was written. A failure after that throws an
- * AirtableBatchError with the combined results of the chunks that succeeded.
+ * original error, since no earlier chunk succeeded. A failure after that throws
+ * an AirtableBatchError with the combined results of the chunks that succeeded.
  */
 export async function sendInChunks<Item, ChunkResult, Result>({
   items,
@@ -66,9 +71,8 @@ export async function sendInChunks<Item, ChunkResult, Result>({
     } catch (error) {
       if (start === 0) throw error;
 
-      const reason = error instanceof Error ? error.message : String(error);
       throw new AirtableBatchError({
-        message: `Batch stopped after ${start} of ${items.length} items: ${reason}`,
+        message: `Batch stopped after ${start} of ${items.length} items: ${getErrorMessage(error)}`,
         completed: combine(results),
         pending: items.slice(start),
         cause: error,

@@ -23,6 +23,7 @@ export async function buildAirtableTypes(
     tableNameOrId,
     enumMode,
     unknownFieldBehavior,
+    schemaMode,
   });
 
   const content = emitTypeScript({

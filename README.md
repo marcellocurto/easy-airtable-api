@@ -485,8 +485,8 @@ await deleteRecords({
 `createRecords`, `updateRecords`, `replaceRecords`, `updateRecordsUpsert`, and `deleteRecords` send records in chunks of 10. If a chunk fails after earlier chunks succeeded, Airtable has already applied those earlier chunks. The helper then throws an `AirtableBatchError` that tells you what happened:
 
 - `completed` holds what Airtable confirmed, in the helper's usual result shape.
-- `pending` holds the inputs Airtable did not confirm, starting with the chunk that failed.
-- `cause` holds the original error.
+- `pending` holds the inputs Airtable did not confirm, starting with the chunk that failed. After a `5xx` or a dropped connection, Airtable may still have applied that chunk, so check before you resend it.
+- `cause` holds the original error. When it is an `AirtableApiError`, its `statusCode`, `retryable`, and `retryAfterMs` are there.
 
 ```ts
 import { AirtableBatchError, createRecords } from 'easy-airtable-api';
@@ -503,7 +503,7 @@ try {
 }
 ```
 
-When the first chunk fails, nothing was written, so the helper throws the original error instead.
+When the first chunk fails, no earlier chunk succeeded, so the helper throws the original error instead. The same caution applies: after a `5xx` or a dropped connection, that chunk may still have been applied.
 
 ## Exports
 

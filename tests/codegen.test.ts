@@ -247,18 +247,46 @@ describe('Airtable codegen', () => {
     ].map((match) => match[1]);
     expect(new Set(exportedNames).size).toBe(exportedNames.length);
 
-    // Table types keep their plain names; colliding select aliases are renamed.
+    // Table types keep their plain names unless they collide with an imported
+    // type. Select aliases that collide with a table type, or with each other,
+    // all take a stable suffix from their field ID.
     expect(result.content).toContain(
       'export type ProjectRecord = AirtableRecord<ProjectRecordFields>;'
     );
     expect(result.content).toContain(
-      'export type ProjectTaskStatus = "Open" | "Done" | (string & {});'
+      'export type AirtableRecord_ble001 = AirtableRecord<AirtableRecordFields>;'
     );
+    expect(result.content).toContain(
+      'export type ProjectRecord_rdSel1 = "Kept" | (string & {});'
+    );
+    expect(result.content).toContain(
+      'export type ProjectTaskStatus_Stat01 = "Open" | "Done" | (string & {});'
+    );
+    expect(result.content).toContain(
+      'export type ProjectTaskStatus_us0001 = "Todo" | (string & {});'
+    );
+    expect(result.content).not.toContain('export type ProjectTaskStatus =');
+
     const collisionWarnings = result.warnings.filter((warning) =>
       warning.includes('collides with')
     );
-    expect(collisionWarnings).toHaveLength(3);
+    expect(collisionWarnings).toHaveLength(4);
 
+    await compileGeneratedOutput({ generatedContent: result.content });
+  });
+
+  it('keeps an alias plain when it only matches an interface the schema mode skips', async () => {
+    const schema = await loadFixture('type-name-collisions-schema.json');
+
+    const result = await buildAirtableTypes({
+      source: { schema },
+      enumMode: 'hybrid',
+      schemaMode: 'write',
+    });
+
+    expect(result.content).toContain(
+      'export type ProjectRecord = "Kept" | (string & {});'
+    );
     await compileGeneratedOutput({ generatedContent: result.content });
   });
 

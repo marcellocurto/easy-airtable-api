@@ -19,6 +19,8 @@ import {
   AirtableBatchError,
   createRecords,
   deleteRecords,
+  replaceRecords,
+  updateRecords,
   updateRecordsUpsert,
 } from '../src/index.js';
 import { airtableRequest } from '../src/requests.js';
@@ -130,5 +132,52 @@ describe('batch helpers when a later chunk fails', () => {
       records: recordIds.slice(0, 10).map((id) => ({ id, deleted: true })),
     });
     expect((error as AirtableBatchError).pending).toEqual(recordIds.slice(10));
+  });
+});
+
+describe.each([
+  { helper: updateRecords, method: 'PATCH' },
+  { helper: replaceRecords, method: 'PUT' },
+])('$method batch helper', ({ helper, method }) => {
+  const updates = Array.from({ length: 12 }, (_, index) => ({
+    id: `rec${index + 1}`,
+    fields: { Name: `Record ${index + 1}` },
+  }));
+
+  beforeEach(() => {
+    vi.mocked(airtableRequest).mockReset();
+    delayMock.mockReset();
+    delayMock.mockResolvedValue(undefined);
+  });
+
+  it('sends each chunk with its method and joins the results in order', async () => {
+    vi.mocked(airtableRequest)
+      .mockResolvedValueOnce(createdChunk(1, 10))
+      .mockResolvedValueOnce(createdChunk(11, 2));
+
+    const result = await helper({ ...target, records: updates });
+
+    expect(result.records.map((record) => record.id)).toEqual(
+      updates.map((update) => update.id)
+    );
+    expect(
+      vi.mocked(airtableRequest).mock.calls.map(([request]) => request.method)
+    ).toEqual([method, method]);
+  });
+
+  it('reports the finished chunk when the next one fails', async () => {
+    vi.mocked(airtableRequest)
+      .mockResolvedValueOnce(createdChunk(1, 10))
+      .mockRejectedValueOnce(invalidValue);
+
+    const error = await helper({ ...target, records: updates }).catch(
+      (caught: unknown) => caught
+    );
+
+    expect(error).toBeInstanceOf(AirtableBatchError);
+    expect((error as AirtableBatchError).completed).toEqual(
+      createdChunk(1, 10)
+    );
+    expect((error as AirtableBatchError).pending).toEqual(updates.slice(10));
   });
 });
