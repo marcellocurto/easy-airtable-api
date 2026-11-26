@@ -37,7 +37,7 @@ function readMode<Flag extends ModeFlag>(
     MODE_VALUES[flag];
   if (!isOneOf(allowed, value)) {
     throw new Error(
-      `Invalid value "${value}" for ${flag}. Use one of: ${allowed.join(', ')}.`
+      `Invalid value for ${flag}. Use one of: ${allowed.join(', ')}.`
     );
   }
   return value;

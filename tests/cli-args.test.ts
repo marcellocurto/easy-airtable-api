@@ -47,7 +47,7 @@ describe('parseGenerateArgs', () => {
     expect(() =>
       parseGenerateArgs(['--schemaPath', 's.json', '--schemaMode', 'reed'])
     ).toThrow(
-      'Invalid value "reed" for --schemaMode. Use one of: read, write, full.'
+      'Invalid value for --schemaMode. Use one of: read, write, full.'
     );
   });
 
