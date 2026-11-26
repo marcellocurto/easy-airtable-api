@@ -27,6 +27,13 @@ export declare class AirtableApiError extends Error {
     retryAfterMs?: number;
     /** How many attempts were sent before the request failed for good. */
     attempts?: number;
+    /**
+     * Whether an earlier attempt failed in a way that may have applied the
+     * request, such as a 5xx or a connection that dropped after sending. The
+     * delete helpers use it to read a 404 on the final attempt as "already
+     * deleted".
+     */
+    earlierAttemptMayHaveApplied?: boolean;
     cause?: unknown;
     request?: {
         method: string;

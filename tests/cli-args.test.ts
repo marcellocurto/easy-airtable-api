@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseGenerateArgs, unknownCommandMessage } from '../src/cli-args.js';
+import {
+  parseCliArgs,
+  parseGenerateArgs,
+  unknownCommandMessage,
+} from '../src/cli-args.js';
 
 describe('parseGenerateArgs', () => {
   it('reads every option, in both --flag value and --flag=value form', () => {
@@ -46,7 +50,9 @@ describe('parseGenerateArgs', () => {
   it('rejects a mode value that is not one of the allowed ones', () => {
     expect(() =>
       parseGenerateArgs(['--schemaPath', 's.json', '--schemaMode', 'reed'])
-    ).toThrow('Invalid value for --schemaMode. Use one of: read, write, full.');
+    ).toThrow(
+      /^Invalid value for --schemaMode\. Use one of: read, write, full\.$/
+    );
   });
 
   it('rejects an unknown option', () => {
@@ -108,6 +114,28 @@ describe('parseGenerateArgs', () => {
     );
     expect(unknownCommandMessage('pat123.secret')).toBe(
       'Unknown command. Run easy-airtable-api --help to see the commands.'
+    );
+  });
+});
+
+describe('parseCliArgs', () => {
+  it('asks for help with no command or with --help anywhere', () => {
+    expect(parseCliArgs([])).toEqual({ command: 'help' });
+    expect(parseCliArgs(['generate', '--help'])).toEqual({ command: 'help' });
+  });
+
+  it('reads generate options', () => {
+    expect(parseCliArgs(['generate', '--schemaPath', 's.json'])).toMatchObject({
+      command: 'generate',
+      options: { source: { schemaPath: 's.json' } },
+    });
+  });
+
+  it('rejects an unknown command without repeating an argument that could be a token', () => {
+    expect(() =>
+      parseCliArgs(['--accessToken=pat123.secret', 'generate'])
+    ).toThrow(
+      /^Unknown command\. Run easy-airtable-api --help to see the commands\.$/
     );
   });
 });

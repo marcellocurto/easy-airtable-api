@@ -482,7 +482,9 @@ describe('Airtable codegen', () => {
 
       await expect(
         buildAirtableTypes({ source: { schema }, [option]: value })
-      ).rejects.toThrow(`Invalid value for ${option}. Use one of: ${allowed}.`);
+      ).rejects.toThrow(
+        new RegExp(`^Invalid value for ${option}\\. Use one of: ${allowed}\\.$`)
+      );
     }
   );
 });

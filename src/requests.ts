@@ -51,6 +51,13 @@ export class AirtableApiError extends Error {
   retryAfterMs?: number;
   /** How many attempts were sent before the request failed for good. */
   attempts?: number;
+  /**
+   * Whether an earlier attempt failed in a way that may have applied the
+   * request, such as a 5xx or a connection that dropped after sending. The
+   * delete helpers use it to read a 404 on the final attempt as "already
+   * deleted".
+   */
+  earlierAttemptMayHaveApplied?: boolean;
   cause?: unknown;
   request?: {
     method: string;
@@ -128,11 +135,11 @@ function resolveRetryOptions(
 }
 
 function shouldRetryError(
-  error: unknown,
+  error: AirtableApiError,
   attempt: number,
   retryOptions: Required<AirtableRetryOptions>
-): error is AirtableApiError {
-  if (!(error instanceof AirtableApiError) || !error.retryable) {
+): boolean {
+  if (!error.retryable) {
     return false;
   }
 
@@ -146,11 +153,15 @@ function shouldRetryError(
     return false;
   }
 
+  if (error.statusCode === undefined) {
+    return retryOptions.retryOnNetworkErrors;
+  }
+
   if (error.statusCode === 429) {
     return retryOptions.retryOn429;
   }
 
-  if (error.statusCode !== undefined && error.statusCode >= 500) {
+  if (error.statusCode >= 500) {
     return retryOptions.retryOn5xx;
   }
 
@@ -184,37 +195,27 @@ function hasRetryableNetworkCode(error: Error): boolean {
   );
 }
 
-/** A connection failure from `apiRequest` that a later attempt can get past. */
-function isRetryableNetworkError(error: unknown): error is AirtableApiError {
-  return (
-    error instanceof AirtableApiError &&
-    error.statusCode === undefined &&
-    error.cause instanceof Error &&
-    hasRetryableNetworkCode(error.cause)
-  );
-}
+// Connection failures that happen before anything is sent, so Airtable can't
+// have applied the request.
+const PRE_SEND_NETWORK_ERROR_CODES = new Set([
+  'ECONNREFUSED',
+  'ENETUNREACH',
+  'EHOSTUNREACH',
+  'EAI_AGAIN',
+  'ENOTFOUND',
+]);
 
 /**
- * Fills in what only the retry loop knows before a request fails for good: its
- * context, how many attempts were sent, and whether resending it is safe. A
- * request that isn't safe to repeat may already have been applied after a 5xx
- * or a dropped connection, so it isn't retryable. A 429 stays retryable,
- * because the library treats a rate-limited request as not processed.
+ * Whether Airtable may have applied a request that failed this way: a 5xx, or
+ * a connection that failed after the request may have been sent. A 429 and
+ * other 4xx responses mean Airtable didn't apply it.
  */
-function finalizeError(
-  error: unknown,
-  {
-    attempts,
-    idempotent,
-    context,
-  }: { attempts: number; idempotent: boolean; context: RequestContext }
-): unknown {
-  if (!(error instanceof AirtableApiError)) return error;
-
-  error.attempts = attempts;
-  error.request ??= context;
-  if (!idempotent && error.statusCode !== 429) error.retryable = false;
-  return error;
+function couldHaveBeenApplied(error: AirtableApiError): boolean {
+  if (error.statusCode !== undefined) return error.statusCode >= 500;
+  const { cause } = error;
+  const code =
+    cause instanceof Error && 'code' in cause ? String(cause.code) : undefined;
+  return code === undefined || !PRE_SEND_NETWORK_ERROR_CODES.has(code);
 }
 
 // After a 429, Airtable rejects every request for 30 seconds.
@@ -358,13 +359,8 @@ export async function airtableApiRequest<T>(request: {
   // POST, or none, which Node sends as GET.
   const idempotent =
     request.idempotent ?? (method ?? 'GET').toUpperCase() !== 'POST';
-  const retryOptions = idempotent
-    ? resolveRetryOptions(retry)
-    : {
-        ...resolveRetryOptions(retry),
-        retryOn5xx: false,
-        retryOnNetworkErrors: false,
-      };
+  const retryOptions = resolveRetryOptions(retry);
+  let earlierAttemptMayHaveApplied = false;
 
   for (let attempt = 0; ; attempt += 1) {
     try {
@@ -381,25 +377,23 @@ export async function airtableApiRequest<T>(request: {
 
       return parseResponse<T>(response, context);
     } catch (error) {
+      if (!(error instanceof AirtableApiError)) throw error;
+
+      // A request that isn't safe to repeat, such as a create, is resent only
+      // when Airtable can't have applied the attempt that failed.
+      const mayHaveApplied = couldHaveBeenApplied(error);
+      if (!idempotent && mayHaveApplied) error.retryable = false;
+
       if (shouldRetryError(error, attempt, retryOptions)) {
+        earlierAttemptMayHaveApplied ||= mayHaveApplied;
         await delay(getRetryDelayMs(error, attempt, retryOptions));
         continue;
       }
 
-      if (
-        retryOptions.retryOnNetworkErrors &&
-        isRetryableNetworkError(error) &&
-        attempt < retryOptions.maxRetries
-      ) {
-        await delay(getRetryDelayMs(error, attempt, retryOptions));
-        continue;
-      }
-
-      throw finalizeError(error, {
-        attempts: attempt + 1,
-        idempotent,
-        context,
-      });
+      error.attempts = attempt + 1;
+      error.earlierAttemptMayHaveApplied = earlierAttemptMayHaveApplied;
+      error.request ??= context;
+      throw error;
     }
   }
 }

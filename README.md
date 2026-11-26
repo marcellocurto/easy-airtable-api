@@ -25,6 +25,8 @@ npm install easy-airtable-api
 bun add easy-airtable-api
 ```
 
+Requires Node.js 20 or later.
+
 ## Recommended project setup
 
 A good setup is to generate Airtable types once and commit the generated file.
@@ -341,18 +343,18 @@ How long the library waits between attempts:
 
 Network errors are retried when Node reports a connection failure: `ECONNRESET`, `ECONNREFUSED`, `ETIMEDOUT`, `EPIPE`, `ENETUNREACH`, `EHOSTUNREACH`, `EAI_AGAIN`, or `ENOTFOUND`. An attempt that receives no data for `timeoutMs` (five minutes by default) fails with `ETIMEDOUT` and is retried the same way.
 
-Requests that create something, such as `createRecord()`, `createRecords()`, `createBase()`, and `POST` requests sent with `airtableRequestRaw()`, are retried only after a `429` rate limit. Airtable may already have created the records when it returns a `5xx` or the connection drops, so the library does not send those requests again. Instead it throws the error, and you can check whether the records exist before trying again. Reads, updates, upserts, and deletes are retried as configured, including `getRecords()`, which uses `POST` to list records. When a retried delete finds the record already gone, the first attempt must have deleted it, so `deleteRecord()` and `deleteRecords()` report it as deleted.
+Requests that create something, such as `createRecord()`, `createRecords()`, `createBase()`, and `POST` requests sent with `airtableRequestRaw()`, are retried only when Airtable can't have applied them: after a `429` rate limit, or when the connection never opened (`ECONNREFUSED`, `ENOTFOUND`, `EAI_AGAIN`, `ENETUNREACH`, `EHOSTUNREACH`). Airtable may already have created the records when it returns a `5xx` or the connection drops after sending, so the library does not send those requests again. Instead it throws the error, and you can check whether the records exist before trying again. Reads, updates, upserts, and deletes are retried as configured, including `getRecords()`, which uses `POST` to list records. When `deleteRecord()` is retried after a `5xx` or a dropped connection and the retry finds the record gone, the earlier attempt deleted it, so it reports the record as deleted. `deleteRecords()` doesn't do this, because a `404` for a batch doesn't say which record was missing; its error has `earlierAttemptMayHaveApplied: true` so you can check the records yourself.
 
 ### Errors
 
-Every request that fails for good throws an `AirtableApiError`, whether Airtable answered with an error or the connection failed:
+A request that Airtable or the network fails throws an `AirtableApiError`, whether Airtable answered with an error or the connection failed:
 
 - `statusCode` and `airtableType` describe Airtable's answer. They are unset for a connection failure, whose Node error, with its `code`, is `cause`.
 - `retryable` says whether resending the same request is safe and could succeed. It is `false` for a create that failed after Airtable may already have applied it.
-- `attempts` is how many attempts were sent.
+- `attempts` is how many attempts were sent, and `earlierAttemptMayHaveApplied` says whether an earlier attempt failed in a way that may have applied the request.
 - `retryAfterMs` holds the server's `Retry-After`, when it sent one.
 
-A response whose body isn't valid JSON throws a plain `Error` instead.
+A response whose body isn't valid JSON throws a plain `Error` instead. Input that Node rejects before sending anything, such as an API key containing a line break or an invalid `apiURL`, throws a `TypeError`.
 
 ## Runtime examples
 

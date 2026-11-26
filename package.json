@@ -40,7 +40,7 @@
   "author": "Marcello Curto",
   "license": "MIT",
   "engines": {
-    "node": ">=22"
+    "node": ">=20"
   },
   "prettier": {
     "trailingComma": "es5",

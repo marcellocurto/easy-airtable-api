@@ -96,6 +96,38 @@ describe('errors a request finally fails with', () => {
     ).rejects.toMatchObject({ statusCode: 503, retryable: false, attempts: 1 });
   });
 
+  it('marks a create whose connection dropped as not retryable and does not resend it', async () => {
+    requestMock.mockImplementation(dropConnection);
+
+    await expect(
+      createRecords({ ...target, records: [{ fields: { Name: 'A' } }] })
+    ).rejects.toMatchObject({ retryable: false, attempts: 1 });
+    expect(requestMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('retries a create whose connection was refused, since nothing reached Airtable', async () => {
+    requestMock
+      .mockImplementationOnce(() => {
+        const req = new EventEmitter() as FakeRequest;
+        req.write = () => undefined;
+        req.end = () => {
+          req.emit(
+            'error',
+            Object.assign(new Error('connect ECONNREFUSED'), {
+              code: 'ECONNREFUSED',
+            })
+          );
+        };
+        return req;
+      })
+      .mockImplementationOnce(respondWith(200, { records: [] }));
+
+    await expect(
+      createRecords({ ...target, records: [{ fields: { Name: 'A' } }] })
+    ).resolves.toEqual({ records: [] });
+    expect(requestMock).toHaveBeenCalledTimes(2);
+  });
+
   it('keeps a rate-limited create retryable, since Airtable did not process it', async () => {
     requestMock.mockImplementation(respondWith(429, {}));
 
@@ -128,18 +160,26 @@ describe('deletes whose first response was lost', () => {
     ).rejects.toMatchObject({ statusCode: 404 });
   });
 
-  it('treats a 404 on a retried batch delete as success for that chunk', async () => {
+  it('still fails a delete retried after a 429, since Airtable did not process the first attempt', async () => {
+    requestMock
+      .mockImplementationOnce(respondWith(429, {}))
+      .mockImplementationOnce(respondWith(404, notFound));
+
+    await expect(
+      deleteRecord({ ...target, recordId: 'recTypo' })
+    ).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  it('reports a 404 on a retried batch delete, because it does not say which ID was missing', async () => {
     requestMock
       .mockImplementationOnce(dropConnection)
       .mockImplementationOnce(respondWith(404, notFound));
 
     await expect(
-      deleteRecords({ ...target, recordIds: ['rec1', 'rec2'] })
-    ).resolves.toEqual({
-      records: [
-        { id: 'rec1', deleted: true },
-        { id: 'rec2', deleted: true },
-      ],
+      deleteRecords({ ...target, recordIds: ['rec1', 'recStale'] })
+    ).rejects.toMatchObject({
+      statusCode: 404,
+      earlierAttemptMayHaveApplied: true,
     });
   });
 });

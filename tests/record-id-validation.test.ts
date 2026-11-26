@@ -39,13 +39,40 @@ describe('single-record helpers', () => {
     }
   );
 
-  it('encodes the record ID so its characters stay part of the path', async () => {
-    vi.mocked(airtableRequest).mockResolvedValueOnce({});
+  it.each([
+    ['getRecord', (recordId: string) => getRecord({ ...target, recordId })],
+    [
+      'updateRecord',
+      (recordId: string) => updateRecord({ ...target, recordId, fields: {} }),
+    ],
+    [
+      'replaceRecord',
+      (recordId: string) => replaceRecord({ ...target, recordId, fields: {} }),
+    ],
+    [
+      'deleteRecord',
+      (recordId: string) => deleteRecord({ ...target, recordId }),
+    ],
+  ])(
+    '%s encodes the record ID so its characters stay part of the path',
+    async (_name, call) => {
+      vi.mocked(airtableRequest).mockResolvedValueOnce({});
 
-    await getRecord({ ...target, recordId: 'rec1?x=1#y/z' });
+      await call('rec1?x=1#y/z');
 
-    expect(vi.mocked(airtableRequest).mock.calls[0][0].endpoint).toBe(
-      '/rec1%3Fx%3D1%23y%2Fz'
-    );
-  });
+      expect(vi.mocked(airtableRequest).mock.calls[0][0].endpoint).toBe(
+        '/rec1%3Fx%3D1%23y%2Fz'
+      );
+    }
+  );
+
+  it.each(['.', '..'])(
+    'rejects the record ID %j, which URL parsing would collapse into another path',
+    async (recordId) => {
+      await expect(getRecord({ ...target, recordId })).rejects.toThrow(
+        'Record ID must not be "." or "..".'
+      );
+      expect(vi.mocked(airtableRequest)).not.toHaveBeenCalled();
+    }
+  );
 });
