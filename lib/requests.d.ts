@@ -49,9 +49,9 @@ export declare function airtableApiRequest<T>(request: {
     /**
      * Whether sending this request twice has the same effect as sending it
      * once. Defaults to true for every method except POST. A request that is not
-     * safe to repeat is retried only after a 429, because Airtable rejects a
-     * rate-limited request without applying it. After a 5xx or a dropped
-     * connection it may already have been applied, so it is not resent.
+     * safe to repeat is not resent after a 5xx or a dropped connection, because
+     * Airtable may already have applied it. It is still retried after a 429,
+     * which the library treats as a request Airtable did not process.
      */
     idempotent?: boolean;
     requestContext?: {

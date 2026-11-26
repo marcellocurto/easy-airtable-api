@@ -18,7 +18,7 @@ vi.mock('../src/utils.js', async () => {
   };
 });
 
-import { createRecords, getRecordsPage } from '../src/index.js';
+import { createRecords, getRecordsPage, updateRecords } from '../src/index.js';
 
 type FakeRequest = EventEmitter & {
   write: (chunk: string) => void;
@@ -100,7 +100,7 @@ describe('retries for requests that are not safe to repeat', () => {
     expect(requestMock).toHaveBeenCalledTimes(1);
   });
 
-  it('still retries a create that Airtable rate limited, because a 429 means nothing was written', async () => {
+  it('still retries a create that Airtable rate limited, since the library treats a 429 as not processed', async () => {
     requestMock
       .mockImplementationOnce(respondWith(429, {}))
       .mockImplementationOnce(respondWith(200, created));
@@ -133,6 +133,20 @@ describe('retries for requests that are not safe to repeat', () => {
     const page = await getRecordsPage({ ...target });
 
     expect(page.records.map((record) => record.id)).toEqual(['rec1']);
+    expect(requestMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('still retries an update after a 5xx response, because writing the same values twice is harmless', async () => {
+    requestMock
+      .mockImplementationOnce(respondWith(503, {}))
+      .mockImplementationOnce(respondWith(200, created));
+
+    const result = await updateRecords({
+      ...target,
+      records: [{ id: 'rec1', fields: { Name: 'A' } }],
+    });
+
+    expect(result.records.map((record) => record.id)).toEqual(['rec1']);
     expect(requestMock).toHaveBeenCalledTimes(2);
   });
 });

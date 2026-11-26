@@ -109,8 +109,7 @@ function resolveRetryOptions(
 function shouldRetryError(
   error: unknown,
   attempt: number,
-  retryOptions: Required<AirtableRetryOptions>,
-  idempotent: boolean
+  retryOptions: Required<AirtableRetryOptions>
 ): error is AirtableApiError {
   if (!(error instanceof AirtableApiError) || !error.retryable) {
     return false;
@@ -124,10 +123,8 @@ function shouldRetryError(
     return retryOptions.retryOn429;
   }
 
-  // A 5xx can arrive after Airtable applied the request, so only requests that
-  // are safe to repeat are retried.
   if (error.statusCode !== undefined && error.statusCode >= 500) {
-    return retryOptions.retryOn5xx && idempotent;
+    return retryOptions.retryOn5xx;
   }
 
   return false;
@@ -245,9 +242,9 @@ export async function airtableApiRequest<T>(request: {
   /**
    * Whether sending this request twice has the same effect as sending it
    * once. Defaults to true for every method except POST. A request that is not
-   * safe to repeat is retried only after a 429, because Airtable rejects a
-   * rate-limited request without applying it. After a 5xx or a dropped
-   * connection it may already have been applied, so it is not resent.
+   * safe to repeat is not resent after a 5xx or a dropped connection, because
+   * Airtable may already have applied it. It is still retried after a 429,
+   * which the library treats as a request Airtable did not process.
    */
   idempotent?: boolean;
   requestContext?: {
@@ -284,7 +281,13 @@ export async function airtableApiRequest<T>(request: {
     method,
     path: resolvedPath,
   };
-  const retryOptions = resolveRetryOptions(retry);
+  const retryOptions = idempotent
+    ? resolveRetryOptions(retry)
+    : {
+        ...resolveRetryOptions(retry),
+        retryOn5xx: false,
+        retryOnNetworkErrors: false,
+      };
 
   for (let attempt = 0; ; attempt += 1) {
     try {
@@ -301,14 +304,13 @@ export async function airtableApiRequest<T>(request: {
 
       return response.data;
     } catch (error) {
-      if (shouldRetryError(error, attempt, retryOptions, idempotent)) {
+      if (shouldRetryError(error, attempt, retryOptions)) {
         await delay(getRetryDelayMs(error, attempt, retryOptions));
         continue;
       }
 
       if (
         error instanceof Error &&
-        idempotent &&
         retryOptions.retryOnNetworkErrors &&
         isRetryableNetworkError(error) &&
         attempt < retryOptions.maxRetries
