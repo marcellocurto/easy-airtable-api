@@ -277,12 +277,7 @@ export async function airtableApiRequest<T>(request: {
    * which the library treats as a request Airtable did not process.
    */
   idempotent?: boolean;
-  requestContext?: {
-    method: string;
-    baseId?: string;
-    tableId?: string;
-    path?: string;
-  };
+  requestContext?: RequestContext;
 }): Promise<T> {
   const {
     apiKey,
@@ -321,7 +316,7 @@ export async function airtableApiRequest<T>(request: {
 
   for (let attempt = 0; ; attempt += 1) {
     try {
-      const response = await apiRequest<T>({
+      const response = await apiRequest({
         url: buildAirtableApiUrl({
           apiURL,
           path: resolvedPath,
@@ -330,9 +325,8 @@ export async function airtableApiRequest<T>(request: {
         method,
         body,
       });
-      validateResponse(response, context);
 
-      return response.data;
+      return parseResponse<T>(response, context);
     } catch (error) {
       if (shouldRetryError(error, attempt, retryOptions)) {
         await delay(getRetryDelayMs(error, attempt, retryOptions));
@@ -444,134 +438,110 @@ interface AirtableErrorResponse {
   };
 }
 
-function validateResponse<T>(
-  response: ApiResponse<T>,
-  requestContext: {
-    method: string;
-    baseId?: string;
-    tableId?: string;
-    path?: string;
+type RequestContext = {
+  method: string;
+  baseId?: string;
+  tableId?: string;
+  path?: string;
+};
+
+const STATUS_MESSAGES: Partial<Record<number, string>> = {
+  401: 'Incorrect API Key.',
+  403: 'Not authorized.',
+  404: 'Table or record not found.',
+  413: 'Request body is too large.',
+  422: 'Operation cannot be processed. Do the field names match?',
+  429: 'Too many requests to the Airtable server.',
+  503: 'Airtable service unavailable.',
+};
+
+function isRetryableStatus(statusCode: number | undefined): boolean {
+  return statusCode !== undefined && (statusCode === 429 || statusCode >= 500);
+}
+
+function messageForStatus(statusCode: number | undefined): string {
+  const message =
+    statusCode === undefined ? undefined : STATUS_MESSAGES[statusCode];
+  if (message) return message;
+  if (statusCode !== undefined && statusCode >= 500) {
+    return 'Airtable server error.';
   }
-) {
-  const statusCode = response.statusCode;
-  const retryAfterMs = parseRetryAfterMs(response.headers?.['retry-after']);
-  if (
-    statusCode !== undefined &&
-    statusCode >= 200 &&
-    statusCode < 300
-  )
-    return;
+  return 'Unexpected error.';
+}
 
-  const isAirtableError = (data: unknown): data is AirtableErrorResponse => {
-    return (
-      data !== null &&
-      typeof data === 'object' &&
-      'error' in data &&
-      typeof data.error === 'object' &&
-      data.error !== null &&
-      'message' in data.error &&
-      typeof data.error.message === 'string'
-    );
-  };
+function isAirtableError(data: unknown): data is AirtableErrorResponse {
+  return (
+    data !== null &&
+    typeof data === 'object' &&
+    'error' in data &&
+    typeof data.error === 'object' &&
+    data.error !== null &&
+    'message' in data.error &&
+    typeof data.error.message === 'string'
+  );
+}
 
-  if (response.data && isAirtableError(response.data)) {
-    throw new AirtableApiError({
-      message: response.data.error.message,
-      statusCode,
-      airtableType: response.data.error.type,
-      retryable: statusCode === 429 || statusCode === 500 || statusCode === 503,
-      request: requestContext,
-      retryAfterMs,
-    });
+/**
+ * Reads Airtable's `{ error: { type, message } }` payload from an error
+ * response. Gateways and proxies can answer with HTML or an empty body, which
+ * yields undefined so the error falls back to a message for its status code.
+ */
+function readAirtableError(
+  body: string
+): AirtableErrorResponse['error'] | undefined {
+  try {
+    const data: unknown = JSON.parse(body);
+    return isAirtableError(data) ? data.error : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Returns the parsed JSON body of a 2xx response, or undefined for a 204 No
+ * Content. Any other status throws an AirtableApiError carrying the status
+ * code, whatever the body contains.
+ */
+function parseResponse<T>(
+  response: ApiResponse,
+  requestContext: RequestContext
+): T {
+  const { statusCode, body } = response;
+
+  if (statusCode !== undefined && statusCode >= 200 && statusCode < 300) {
+    if (statusCode === 204) return undefined as T;
+
+    try {
+      return JSON.parse(body) as T;
+    } catch {
+      throw new Error(`Failed to parse response as JSON: ${body}`);
+    }
   }
 
-  if (statusCode === 401)
-    throw new AirtableApiError({
-      message: 'Incorrect API Key.',
-      statusCode,
-      retryable: false,
-      request: requestContext,
-      retryAfterMs,
-    });
-  else if (statusCode === 403)
-    throw new AirtableApiError({
-      message: 'Not authorized.',
-      statusCode,
-      retryable: false,
-      request: requestContext,
-      retryAfterMs,
-    });
-  else if (statusCode === 404)
-    throw new AirtableApiError({
-      message: 'Table or record not found.',
-      statusCode,
-      retryable: false,
-      request: requestContext,
-      retryAfterMs,
-    });
-  else if (statusCode === 413)
-    throw new AirtableApiError({
-      message: 'Request body is too large.',
-      statusCode,
-      retryable: false,
-      request: requestContext,
-      retryAfterMs,
-    });
-  else if (statusCode === 422) {
-    throw new AirtableApiError({
-      message: 'Operation cannot be processed. Do the field names match?',
-      statusCode,
-      retryable: false,
-      request: requestContext,
-      retryAfterMs,
-    });
-  } else if (statusCode === 429) {
-    throw new AirtableApiError({
-      message: 'Too many requests to the Airtable server.',
-      statusCode,
-      retryable: true,
-      request: requestContext,
-      retryAfterMs,
-    });
-  } else if (statusCode === 500)
-    throw new AirtableApiError({
-      message: 'Airtable server error.',
-      statusCode,
-      retryable: true,
-      request: requestContext,
-      retryAfterMs,
-    });
-  else if (statusCode === 503)
-    throw new AirtableApiError({
-      message: 'Airtable service unavailable.',
-      statusCode,
-      retryable: true,
-      request: requestContext,
-      retryAfterMs,
-    });
+  const airtableError = readAirtableError(body);
   throw new AirtableApiError({
-    message: 'Unexpected error.',
+    message: airtableError?.message ?? messageForStatus(statusCode),
     statusCode,
-    retryable: false,
+    airtableType: airtableError?.type,
+    retryable: isRetryableStatus(statusCode),
     request: requestContext,
-    retryAfterMs,
+    retryAfterMs: parseRetryAfterMs(response.headers?.['retry-after']),
   });
 }
 
-type ApiResponse<T> = {
-  data: T;
+type ApiResponse = {
+  body: string;
   statusCode?: number;
-  statusMessage?: string;
   headers?: IncomingMessage['headers'];
 };
 
-async function apiRequest<T>({
+async function apiRequest({
   url,
   method,
   apiKey,
   body,
-}: ApiRequest): Promise<ApiResponse<T>> {
-  return new Promise<ApiResponse<T>>((resolve, reject) => {
+}: ApiRequest): Promise<ApiResponse> {
+  return new Promise<ApiResponse>((resolve, reject) => {
     const parsedUrl = new URL(url);
     const { hostname, pathname, search } = parsedUrl;
 
@@ -596,17 +566,11 @@ async function apiRequest<T>({
       });
 
       res.on('end', () => {
-        const data = Buffer.concat(chunks).toString('utf8');
-        try {
-          resolve({
-            data: JSON.parse(data) as T,
-            statusCode: res.statusCode,
-            statusMessage: res.statusMessage,
-            headers: res.headers,
-          });
-        } catch (error) {
-          reject(new Error(`Failed to parse response as JSON: ${data}`));
-        }
+        resolve({
+          body: Buffer.concat(chunks).toString('utf8'),
+          statusCode: res.statusCode,
+          headers: res.headers,
+        });
       });
     });
 

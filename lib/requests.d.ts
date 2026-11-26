@@ -54,12 +54,7 @@ export declare function airtableApiRequest<T>(request: {
      * which the library treats as a request Airtable did not process.
      */
     idempotent?: boolean;
-    requestContext?: {
-        method: string;
-        baseId?: string;
-        tableId?: string;
-        path?: string;
-    };
+    requestContext?: RequestContext;
 }): Promise<T>;
 export declare function airtableRequestRaw<T = unknown>(request: {
     apiKey: string;
@@ -81,3 +76,10 @@ export declare function airtableRequest<T>(request: {
     retry?: AirtableRetryOptions;
     idempotent?: boolean;
 }): Promise<T>;
+type RequestContext = {
+    method: string;
+    baseId?: string;
+    tableId?: string;
+    path?: string;
+};
+export {};
