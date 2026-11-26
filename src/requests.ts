@@ -550,6 +550,15 @@ async function apiRequest<T>({
       });
     });
 
+    // Node only reports an idle socket; without destroying the request here,
+    // a server that stops answering leaves this promise pending forever. The
+    // "timed out" message is what marks the error as retryable.
+    req.on('timeout', () => {
+      req.destroy(
+        new Error(`Request timed out after ${options.timeout} ms of inactivity`)
+      );
+    });
+
     req.on('error', (error: Error) => {
       reject(
         new Error(`airtableApi: ${error.message} (fn_${apiRequest.name})`)
