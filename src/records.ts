@@ -132,6 +132,8 @@ export async function getRecordsPage<Fields>({
     method: 'POST',
     body: options,
     retry,
+    // listRecords only reads, so it is safe to resend despite using POST.
+    idempotent: true,
   });
 }
 
