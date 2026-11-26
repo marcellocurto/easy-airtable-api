@@ -23,7 +23,9 @@ vi.mock('https', () => ({
         ...options,
         hostname: '127.0.0.1',
         port: serverPort.value,
-        timeout: SOCKET_TIMEOUT_MS,
+        // Shorten only a timeout the library actually sets (0 means none), so
+        // these tests hang and fail if `apiRequest` stops passing one.
+        timeout: options.timeout ? SOCKET_TIMEOUT_MS : undefined,
       },
       callback
     ),
