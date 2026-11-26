@@ -6,3 +6,4 @@ AGENT.md
 .env
 tsconfig.json
 vitest.config.ts
+*.tgz
