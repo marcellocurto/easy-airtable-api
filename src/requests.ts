@@ -530,13 +530,16 @@ async function apiRequest<T>({
     };
 
     const req = request(options, (res: IncomingMessage) => {
-      let data = '';
+      // Decode once at the end: a multi-byte UTF-8 character can be split
+      // across chunks, and decoding each chunk separately corrupts it.
+      const chunks: Buffer[] = [];
 
       res.on('data', (chunk: Buffer) => {
-        data += chunk;
+        chunks.push(chunk);
       });
 
       res.on('end', () => {
+        const data = Buffer.concat(chunks).toString('utf8');
         try {
           resolve({
             data: JSON.parse(data) as T,
