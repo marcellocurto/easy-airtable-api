@@ -1,4 +1,5 @@
 import { suffixFromId } from './identifiers.js';
+import type { SchemaMode } from './types.js';
 
 /** Shared field/value types every generated file imports from the package. */
 export const SHARED_TYPE_IMPORTS = [
@@ -12,6 +13,26 @@ export const SHARED_TYPE_IMPORTS = [
   'Collaborator',
   'CollaboratorWrite',
 ] as const;
+
+/** Which of a table's interfaces a schema mode emits. */
+export function emittedInterfaces(schemaMode: SchemaMode): {
+  read: boolean;
+  write: boolean;
+} {
+  return { read: schemaMode !== 'write', write: schemaMode !== 'read' };
+}
+
+/**
+ * The shared types that the given type expressions refer to, in import order,
+ * so a generated file imports only what it uses.
+ */
+export function usedSharedTypes(typeExpressions: string[]): string[] {
+  // Choice names appear as string literals, so drop those before matching.
+  const code = typeExpressions.join(' ').replace(/"(?:[^"\\]|\\.)*"/g, '""');
+  return SHARED_TYPE_IMPORTS.filter((name) =>
+    new RegExp(`\\b${name}\\b`).test(code)
+  );
+}
 
 export interface TableTypeNames {
   recordFields: string;

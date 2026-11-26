@@ -1,3 +1,5 @@
+/** The pause between requests when the caller doesn't set `requestInterval`. */
+export declare const DEFAULT_REQUEST_INTERVAL_MS = 500;
 /**
  * Thrown by the batch helpers when a request fails after earlier requests in
  * the same call succeeded. Airtable has already applied the earlier chunks, so

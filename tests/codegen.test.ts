@@ -15,9 +15,11 @@ async function loadFixture(name: string): Promise<AirtableBaseSchema> {
 async function compileGeneratedOutput({
   generatedContent,
   usageSource = '',
+  compilerOptions = {},
 }: {
   generatedContent: string;
   usageSource?: string;
+  compilerOptions?: Record<string, unknown>;
 }): Promise<void> {
   const tempDirectory = await mkdtemp(join(tmpdir(), 'easy-airtable-api-codegen-'));
   const generatedPath = join(tempDirectory, 'airtable.generated.ts');
@@ -33,6 +35,7 @@ async function compileGeneratedOutput({
         compilerOptions: {
           strict: true,
           noEmit: true,
+          ...compilerOptions,
           skipLibCheck: true,
           module: 'ESNext',
           target: 'ESNext',
@@ -288,6 +291,85 @@ describe('Airtable codegen', () => {
       'export type ProjectRecord = "Kept" | (string & {});'
     );
     await compileGeneratedOutput({ generatedContent: result.content });
+  });
+
+  it('compiles under noUnusedLocals when the schema uses only some shared types', async () => {
+    const schema = await loadFixture('base-schema.json');
+
+    const result = await buildAirtableTypes({ source: { schema } });
+
+    await compileGeneratedOutput({
+      generatedContent: result.content,
+      compilerOptions: { noUnusedLocals: true },
+    });
+  });
+
+  it('keeps line breaks in a table name inside the generated comment', async () => {
+    const result = await buildAirtableTypes({
+      source: {
+        schema: {
+          tables: [
+            {
+              id: 'tblInjected01',
+              name: 'Evil\nexport const injected = 1;\n//',
+              primaryFieldId: 'fldName00001',
+              fields: [
+                { id: 'fldName00001', name: 'Name', type: 'singleLineText' },
+              ],
+            },
+          ],
+        },
+      },
+    });
+
+    expect(result.content.split('\n')).not.toContain(
+      'export const injected = 1;'
+    );
+    await compileGeneratedOutput({ generatedContent: result.content });
+  });
+
+  it('types sync source fields as readonly choices', async () => {
+    const result = await buildAirtableTypes({
+      source: {
+        schema: {
+          tables: [
+            {
+              id: 'tblSynced0001',
+              name: 'Synced',
+              primaryFieldId: 'fldName00001',
+              fields: [
+                { id: 'fldName00001', name: 'Name', type: 'singleLineText' },
+                {
+                  id: 'fldSource0001',
+                  name: 'Source',
+                  type: 'externalSyncSource',
+                  options: {
+                    choices: [
+                      { id: 'sel1', name: 'Salesforce' },
+                      { id: 'sel2', name: 'Jira' },
+                    ],
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      },
+      enumMode: 'literal',
+    });
+
+    const recordFields =
+      result.content
+        .split('export interface SyncedRecordFields {')[1]
+        ?.split('}')[0] ?? '';
+    const createFields =
+      result.content
+        .split('export interface SyncedCreateFields {')[1]
+        ?.split('}')[0] ?? '';
+
+    expect(recordFields).toContain('"Source"?: "Salesforce" | "Jira";');
+    expect(createFields).not.toContain('"Source"');
+    expect(result.warnings).toEqual([]);
   });
 
   it('resolves sanitized name collisions and can generate from a schema file', async () => {

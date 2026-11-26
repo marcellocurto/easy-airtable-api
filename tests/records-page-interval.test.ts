@@ -74,4 +74,19 @@ describe('getRecords page interval', () => {
 
     expect(sleepMock.mock.calls.map((call) => call[0])).toEqual([500]);
   });
+
+  it('does not pause between pages when requestInterval is 0', async () => {
+    vi.mocked(airtableRequest)
+      .mockResolvedValueOnce(page('rec1', 'page2'))
+      .mockResolvedValueOnce(page('rec2'));
+
+    await getRecords({
+      apiKey: 'pat123',
+      baseId: 'app123',
+      tableId: 'tbl123',
+      options: { requestInterval: 0 },
+    });
+
+    expect(sleepMock.mock.calls.filter(([ms]) => ms > 0)).toEqual([]);
+  });
 });

@@ -18,6 +18,7 @@ const FIELD_TYPE_ALIASES: Record<string, string> = {
   attachment: 'multipleAttachments',
   linkToAnotherRecord: 'multipleRecordLinks',
   multipleLookupValues: 'lookup',
+  syncSource: 'externalSyncSource',
 };
 
 const READONLY_FIELD_TYPES = new Set([
@@ -32,7 +33,7 @@ const READONLY_FIELD_TYPES = new Set([
   'lastModifiedTime',
   'lookup',
   'rollup',
-  'syncSource',
+  'externalSyncSource',
 ]);
 
 const COMPUTED_FIELD_TYPES = new Set([
@@ -43,7 +44,7 @@ const COMPUTED_FIELD_TYPES = new Set([
   'formula',
   'lookup',
   'rollup',
-  'syncSource',
+  'externalSyncSource',
 ]);
 
 function canonicalizeFieldType(type: string): string {
@@ -197,6 +198,16 @@ export function mapFieldTypes({
         read: { type: enumType, collection: 'scalar' },
         create: { type: enumType, collection: 'scalar' },
         update: { type: enumType, collection: 'scalar' },
+        readonly,
+        computed,
+        enumTypeAlias: enumType,
+      };
+    }
+    case 'externalSyncSource': {
+      // Names the source a synced record came from; Airtable sets it.
+      const enumType = buildEnumType(normalizedField, enumMode) ?? 'string';
+      return {
+        read: { type: enumType, collection: 'scalar' },
         readonly,
         computed,
         enumTypeAlias: enumType,

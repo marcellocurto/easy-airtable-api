@@ -1,33 +1,6 @@
 #!/usr/bin/env node
+import { parseGenerateArgs } from './cli-args.js';
 import { generateAirtableTypes } from './codegen/generate.js';
-import type {
-  CreateRequiredMode,
-  EnumMode,
-  SchemaMode,
-  UnknownFieldBehavior,
-} from './codegen/types.js';
-
-function readFlag(args: string[], flag: string): string | undefined {
-  const index = args.indexOf(flag);
-  if (index === -1) return undefined;
-  return args[index + 1];
-}
-
-function readMultiFlag(args: string[], flag: string): string[] {
-  const values: string[] = [];
-
-  args.forEach((argument, index) => {
-    if (argument === flag && args[index + 1]) {
-      values.push(args[index + 1]);
-    }
-  });
-
-  return values;
-}
-
-function hasFlag(args: string[], flag: string): boolean {
-  return args.includes(flag);
-}
 
 function printHelp() {
   console.log(`easy-airtable-api generate [options]
@@ -62,37 +35,13 @@ async function main() {
     throw new Error(`Unknown command: ${command}`);
   }
 
-  const tables = readMultiFlag(args, '--table');
-  const schemaPath = readFlag(args, '--schemaPath');
-  const baseId = readFlag(args, '--baseId');
-  const accessToken = readFlag(args, '--accessToken');
-  const apiKey = readFlag(args, '--apiKey');
+  const options = args.slice(1);
+  if (options.includes('--help') || options.includes('-h')) {
+    printHelp();
+    return;
+  }
 
-  const source = schemaPath
-    ? { schemaPath }
-    : {
-        baseId: baseId ?? '',
-        accessToken,
-        apiKey,
-      };
-
-  const result = await generateAirtableTypes({
-    source,
-    output: readFlag(args, '--output'),
-    tableNameOrId: tables.length ? tables : undefined,
-    enumMode: readFlag(args, '--enumMode') as EnumMode | undefined,
-    schemaMode: readFlag(args, '--schemaMode') as SchemaMode | undefined,
-    createRequiredMode: readFlag(
-      args,
-      '--createRequiredMode'
-    ) as CreateRequiredMode | undefined,
-    unknownFieldBehavior: readFlag(
-      args,
-      '--unknownFieldBehavior'
-    ) as UnknownFieldBehavior | undefined,
-    includeTableIds: !hasFlag(args, '--noTableIds'),
-    includeFieldIds: !hasFlag(args, '--noFieldIds'),
-  });
+  const result = await generateAirtableTypes(parseGenerateArgs(options));
 
   console.log(
     `Generated ${result.tablesGenerated} table(s) at ${result.outputPath}`
