@@ -1,0 +1,51 @@
+{
+  "tables": [
+    {
+      "id": "tblAirtable001",
+      "name": "Airtable",
+      "primaryFieldId": "fldAirName001",
+      "fields": [
+        { "id": "fldAirName001", "name": "Name", "type": "singleLineText" }
+      ]
+    },
+    {
+      "id": "tblProject0001",
+      "name": "Project",
+      "primaryFieldId": "fldProjName01",
+      "fields": [
+        { "id": "fldProjName01", "name": "Name", "type": "singleLineText" },
+        {
+          "id": "fldTaskStat01",
+          "name": "Task Status",
+          "type": "singleSelect",
+          "options": {
+            "choices": [
+              { "id": "sel1", "name": "Open" },
+              { "id": "sel2", "name": "Done" }
+            ]
+          }
+        },
+        {
+          "id": "fldRecordSel1",
+          "name": "Record",
+          "type": "singleSelect",
+          "options": { "choices": [{ "id": "sel3", "name": "Kept" }] }
+        }
+      ]
+    },
+    {
+      "id": "tblProjTask001",
+      "name": "Project Task",
+      "primaryFieldId": "fldTaskName01",
+      "fields": [
+        { "id": "fldTaskName01", "name": "Name", "type": "singleLineText" },
+        {
+          "id": "fldStatus0001",
+          "name": "Status",
+          "type": "singleSelect",
+          "options": { "choices": [{ "id": "sel4", "name": "Todo" }] }
+        }
+      ]
+    }
+  ]
+}

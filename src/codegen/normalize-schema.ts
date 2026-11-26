@@ -6,10 +6,12 @@ import {
   toSafeConstKey,
 } from './identifiers.js';
 import { mapFieldToNormalizedField } from './map-field.js';
+import { createTypeNameRegistry, type TableTypeNames } from './type-names.js';
 import type {
   EnumMode,
   NormalizedBase,
   NormalizedTable,
+  SchemaMode,
   UnknownFieldBehavior,
 } from './types.js';
 import { compareByNameThenId, ensureArray } from './utils.js';
@@ -30,11 +32,13 @@ export function normalizeSchema({
   tableNameOrId,
   enumMode,
   unknownFieldBehavior,
+  schemaMode,
 }: {
   schema: AirtableBaseSchema;
   tableNameOrId?: string | string[];
   enumMode: EnumMode;
   unknownFieldBehavior: UnknownFieldBehavior;
+  schemaMode: SchemaMode;
 }): { normalizedBase: NormalizedBase; warnings: string[] } {
   const filters = new Set(ensureArray(tableNameOrId));
   const selectedTables = [...schema.tables]
@@ -54,7 +58,43 @@ export function normalizeSchema({
   const tableTypeNameCounts = countBy(selectedTables, (table) => toPascalCase(table.name));
   const tableConstKeyCounts = countBy(selectedTables, (table) => toSafeConstKey(table.name));
 
-  const tables: NormalizedTable[] = selectedTables.map((table) => {
+  const claimTypeName = createTypeNameRegistry();
+  const claimUniqueTypeName = (
+    wanted: string,
+    ownerId: string,
+    owner: string,
+    alwaysSuffix = false
+  ): string => {
+    const name = claimTypeName(wanted, ownerId, { alwaysSuffix });
+    if (name !== wanted) {
+      warnings.push(
+        `Generated type name ${wanted} for ${owner} collides with another generated or imported type. It is emitted as ${name}.`
+      );
+    }
+    return name;
+  };
+
+  // Every table claims its interface names before any select alias does, so
+  // table types keep their plain names and the aliases take the suffixes. Only
+  // the interfaces this schema mode emits claim a name.
+  const emitsRead = schemaMode !== 'write';
+  const emitsWrite = schemaMode !== 'read';
+  const tableTypeNames: TableTypeNames[] = selectedTables.map((table) => {
+    const tsName = tableNames.get(table.id) ?? table.name;
+    const claim = (suffix: string, emitted: boolean) =>
+      emitted
+        ? claimUniqueTypeName(`${tsName}${suffix}`, table.id, table.name)
+        : `${tsName}${suffix}`;
+
+    return {
+      recordFields: claim('RecordFields', emitsRead),
+      record: claim('Record', emitsRead),
+      createFields: claim('CreateFields', emitsWrite),
+      updateFields: claim('UpdateFields', emitsWrite),
+    };
+  });
+
+  const tables: NormalizedTable[] = selectedTables.map((table, tableIndex) => {
     const tsName = tableNames.get(table.id) ?? table.name;
     const tsConstKey = tableConstKeys.get(table.id) ?? table.name;
 
@@ -115,13 +155,40 @@ export function normalizeSchema({
       name: table.name,
       tsName,
       tsConstKey,
+      typeNames: tableTypeNames[tableIndex],
       primaryFieldId: table.primaryFieldId,
       fields,
     };
   });
 
+  // Select aliases claim after every table type. When several aliases want the
+  // same name, all of them take a suffix, so a table added to the base later
+  // can't quietly take over an alias name that callers already import.
+  const aliasNameCounts = countBy(
+    tables.flatMap((table) =>
+      table.fields.filter((field) => field.enumTypeAlias)
+    ),
+    (field) => field.tsTypeName
+  );
+  const tablesWithAliasNames = tables.map((table) => ({
+    ...table,
+    fields: table.fields.map((field) =>
+      field.enumTypeAlias
+        ? {
+            ...field,
+            tsTypeName: claimUniqueTypeName(
+              field.tsTypeName,
+              field.id,
+              `${table.name}.${field.name}`,
+              (aliasNameCounts.get(field.tsTypeName) ?? 0) > 1
+            ),
+          }
+        : field
+    ),
+  }));
+
   return {
-    normalizedBase: { tables },
+    normalizedBase: { tables: tablesWithAliasNames },
     warnings: [...new Set(warnings)],
   };
 }

@@ -234,6 +234,62 @@ describe('Airtable codegen', () => {
     });
   });
 
+  it('gives every generated type a unique name when tables, fields, and imports collide', async () => {
+    const schema = await loadFixture('type-name-collisions-schema.json');
+
+    const result = await buildAirtableTypes({
+      source: { schema },
+      enumMode: 'hybrid',
+    });
+
+    const exportedNames = [
+      ...result.content.matchAll(/^export (?:type|interface|const) (\w+)/gm),
+    ].map((match) => match[1]);
+    expect(new Set(exportedNames).size).toBe(exportedNames.length);
+
+    // Table types keep their plain names unless they collide with an imported
+    // type. Select aliases that collide with a table type, or with each other,
+    // all take a stable suffix from their field ID.
+    expect(result.content).toContain(
+      'export type ProjectRecord = AirtableRecord<ProjectRecordFields>;'
+    );
+    expect(result.content).toContain(
+      'export type AirtableRecord_ble001 = AirtableRecord<AirtableRecordFields>;'
+    );
+    expect(result.content).toContain(
+      'export type ProjectRecord_rdSel1 = "Kept" | (string & {});'
+    );
+    expect(result.content).toContain(
+      'export type ProjectTaskStatus_Stat01 = "Open" | "Done" | (string & {});'
+    );
+    expect(result.content).toContain(
+      'export type ProjectTaskStatus_us0001 = "Todo" | (string & {});'
+    );
+    expect(result.content).not.toContain('export type ProjectTaskStatus =');
+
+    const collisionWarnings = result.warnings.filter((warning) =>
+      warning.includes('collides with')
+    );
+    expect(collisionWarnings).toHaveLength(4);
+
+    await compileGeneratedOutput({ generatedContent: result.content });
+  });
+
+  it('keeps an alias plain when it only matches an interface the schema mode skips', async () => {
+    const schema = await loadFixture('type-name-collisions-schema.json');
+
+    const result = await buildAirtableTypes({
+      source: { schema },
+      enumMode: 'hybrid',
+      schemaMode: 'write',
+    });
+
+    expect(result.content).toContain(
+      'export type ProjectRecord = "Kept" | (string & {});'
+    );
+    await compileGeneratedOutput({ generatedContent: result.content });
+  });
+
   it('resolves sanitized name collisions and can generate from a schema file', async () => {
     const tempDirectory = await mkdtemp(join(tmpdir(), 'easy-airtable-api-'));
     const output = join(tempDirectory, 'airtable.generated.ts');

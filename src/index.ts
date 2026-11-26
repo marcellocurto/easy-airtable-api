@@ -15,6 +15,7 @@ export {
 } from './records.js';
 
 export { listBases, createBase, getBaseSchema } from './bases.js';
+export { AirtableBatchError } from './batches.js';
 export { airtableRequestRaw, AirtableApiError } from './requests.js';
 export type { AirtableRetryOptions } from './requests.js';
 export type {

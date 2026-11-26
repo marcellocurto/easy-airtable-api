@@ -6,7 +6,7 @@ function normalizeIdentifierInput(value: string): string {
   return value.normalize('NFKD').replace(COMBINING_MARKS, '');
 }
 
-function suffixFromId(id: string): string {
+export function suffixFromId(id: string): string {
   return id.replace(/[^a-zA-Z0-9]/g, '').slice(-6) || 'Id';
 }
 

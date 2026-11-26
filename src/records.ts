@@ -7,6 +7,7 @@ import {
   GetRecordQueryParameters,
   GetRecordsQueryParameters,
 } from './types/records.js';
+import { sendInChunks } from './batches.js';
 import { appendQueryToEndpoint, airtableRequest } from './requests.js';
 import type { AirtableRetryOptions } from './requests.js';
 import { delay } from './utils.js';
@@ -391,44 +392,25 @@ export async function updateRecords<Fields>({
     );
   }
 
-  const chunkSize = 10;
-  const chunks = [];
-  for (let i = 0; i < records.length; i += chunkSize) {
-    chunks.push(records.slice(i, i + chunkSize));
-  }
-
-  let combinedResults: AirtableRecord<Fields>[] = [];
-
-  for (const chunk of chunks) {
-    const result = await airtableRequest<{
-      createdRecords: string[];
-      updatedRecords: string[];
-      records: AirtableRecord<Fields>[];
-    }>({
-      apiKey,
-      baseId,
-      tableId,
-      endpoint: '/',
-      method: options?.overwriteFieldsNotSpecified === true ? 'PUT' : 'PATCH',
-      body: {
-        records: chunk,
-        typecast: options?.typecast ?? false,
-        returnFieldsByFieldId: options?.returnFieldsByFieldId ?? false,
-      },
-      retry,
-    });
-
-    combinedResults = combinedResults.concat(result.records);
-    if (
-      records.length > chunkSize &&
-      chunks.indexOf(chunk) < chunks.length - 1
-    ) {
-      const interval: number = options?.requestInterval || 500;
-      await delay(interval);
-    }
-  }
-
-  return { records: combinedResults };
+  return sendInChunks({
+    items: records,
+    requestInterval: options?.requestInterval,
+    send: (chunk) =>
+      airtableRequest<{ records: AirtableRecord<Fields>[] }>({
+        apiKey,
+        baseId,
+        tableId,
+        endpoint: '/',
+        method: options?.overwriteFieldsNotSpecified === true ? 'PUT' : 'PATCH',
+        body: {
+          records: chunk,
+          typecast: options?.typecast ?? false,
+          returnFieldsByFieldId: options?.returnFieldsByFieldId ?? false,
+        },
+        retry,
+      }),
+    combine: combineRecords,
+  });
 }
 
 export async function replaceRecords<Fields>({
@@ -458,42 +440,25 @@ export async function replaceRecords<Fields>({
     );
   }
 
-  const chunkSize = 10;
-  const chunks = [];
-  for (let i = 0; i < records.length; i += chunkSize) {
-    chunks.push(records.slice(i, i + chunkSize));
-  }
-
-  let combinedResults: AirtableRecord<Fields>[] = [];
-
-  for (const chunk of chunks) {
-    const result = await airtableRequest<{
-      records: AirtableRecord<Fields>[];
-    }>({
-      apiKey,
-      baseId,
-      tableId,
-      endpoint: '/',
-      method: 'PUT',
-      body: {
-        records: chunk,
-        typecast: options?.typecast ?? false,
-        returnFieldsByFieldId: options?.returnFieldsByFieldId ?? false,
-      },
-      retry,
-    });
-
-    combinedResults = combinedResults.concat(result.records);
-    if (
-      records.length > chunkSize &&
-      chunks.indexOf(chunk) < chunks.length - 1
-    ) {
-      const interval: number = options?.requestInterval || 500;
-      await delay(interval);
-    }
-  }
-
-  return { records: combinedResults };
+  return sendInChunks({
+    items: records,
+    requestInterval: options?.requestInterval,
+    send: (chunk) =>
+      airtableRequest<{ records: AirtableRecord<Fields>[] }>({
+        apiKey,
+        baseId,
+        tableId,
+        endpoint: '/',
+        method: 'PUT',
+        body: {
+          records: chunk,
+          typecast: options?.typecast ?? false,
+          returnFieldsByFieldId: options?.returnFieldsByFieldId ?? false,
+        },
+        retry,
+      }),
+    combine: combineRecords,
+  });
 }
 
 export async function updateRecordsUpsert<Fields>({
@@ -534,50 +499,36 @@ export async function updateRecordsUpsert<Fields>({
     throw new Error('fieldsToMergeOn must be an array of strings.');
   }
 
-  const chunkSize = 10;
-  const chunks = [];
-  for (let i = 0; i < records.length; i += chunkSize) {
-    chunks.push(records.slice(i, i + chunkSize));
-  }
+  const { fieldsToMergeOn } = options;
 
-  let allCreatedRecords: string[] = [];
-  let allUpdatedRecords: string[] = [];
-  let allRecords: AirtableRecord<Fields>[] = [];
-
-  for (const chunk of chunks) {
-    const result = await airtableRequest<{
-      createdRecords: string[];
-      updatedRecords: string[];
-      records: AirtableRecord<Fields>[];
-    }>({
-      apiKey,
-      baseId,
-      tableId,
-      endpoint: '/',
-      method: options?.overwriteFieldsNotSpecified === true ? 'PUT' : 'PATCH',
-      body: {
-        records: chunk,
-        typecast: options?.typecast ?? false,
-        returnFieldsByFieldId: options?.returnFieldsByFieldId ?? false,
-        performUpsert: { fieldsToMergeOn: options.fieldsToMergeOn },
-      },
-      retry,
-    });
-
-    allCreatedRecords = allCreatedRecords.concat(result.createdRecords);
-    allUpdatedRecords = allUpdatedRecords.concat(result.updatedRecords);
-    allRecords = allRecords.concat(result.records);
-    if (records.length > chunkSize && chunks.indexOf(chunk) < chunks.length - 1) {
-      const interval: number = options?.requestInterval || 500;
-      await delay(interval);
-    }
-  }
-
-  return {
-    createdRecords: allCreatedRecords,
-    updatedRecords: allUpdatedRecords,
-    records: allRecords,
-  };
+  return sendInChunks({
+    items: records,
+    requestInterval: options.requestInterval,
+    send: (chunk) =>
+      airtableRequest<{
+        createdRecords: string[];
+        updatedRecords: string[];
+        records: AirtableRecord<Fields>[];
+      }>({
+        apiKey,
+        baseId,
+        tableId,
+        endpoint: '/',
+        method: options.overwriteFieldsNotSpecified === true ? 'PUT' : 'PATCH',
+        body: {
+          records: chunk,
+          typecast: options.typecast ?? false,
+          returnFieldsByFieldId: options.returnFieldsByFieldId ?? false,
+          performUpsert: { fieldsToMergeOn },
+        },
+        retry,
+      }),
+    combine: (results) => ({
+      createdRecords: results.flatMap((result) => result.createdRecords),
+      updatedRecords: results.flatMap((result) => result.updatedRecords),
+      records: results.flatMap((result) => result.records),
+    }),
+  });
 }
 
 export async function deleteRecord({
@@ -624,34 +575,22 @@ export async function deleteRecords({
     );
   }
 
-  const chunkSize = 10;
-  const chunks = [];
-  for (let i = 0; i < recordIds.length; i += chunkSize) {
-    chunks.push(recordIds.slice(i, i + chunkSize));
-  }
-
-  let combinedResults: DeleteRecordResponse[] = [];
-
-  for (const chunk of chunks) {
-    const result = await airtableRequest<DeleteRecordsResponse>({
-      apiKey,
-      baseId,
-      tableId,
-      endpoint: appendQueryToEndpoint('', {
-        'records[]': chunk,
+  return sendInChunks({
+    items: recordIds,
+    requestInterval: options?.requestInterval,
+    send: (chunk) =>
+      airtableRequest<DeleteRecordsResponse>({
+        apiKey,
+        baseId,
+        tableId,
+        endpoint: appendQueryToEndpoint('', {
+          'records[]': chunk,
+        }),
+        method: 'DELETE',
+        retry,
       }),
-      method: 'DELETE',
-      retry,
-    });
-
-    combinedResults = combinedResults.concat(result.records);
-    if (recordIds.length > chunkSize && chunks.indexOf(chunk) < chunks.length - 1) {
-      const interval: number = options?.requestInterval || 500;
-      await delay(interval);
-    }
-  }
-
-  return { records: combinedResults };
+    combine: combineRecords,
+  });
 }
 
 export async function createRecord<Fields>({
@@ -714,39 +653,30 @@ export async function createRecords<Fields>({
     );
   }
 
-  const chunkSize = 10;
-  const chunks = [];
-  for (let i = 0; i < records.length; i += chunkSize) {
-    chunks.push(records.slice(i, i + chunkSize));
-  }
+  return sendInChunks({
+    items: records,
+    requestInterval: options?.requestInterval,
+    send: (chunk) =>
+      airtableRequest<{ records: AirtableRecord<Fields>[] }>({
+        apiKey,
+        baseId,
+        tableId,
+        endpoint: '',
+        method: 'POST',
+        body: {
+          records: chunk,
+          typecast: options?.typecast ?? false,
+          returnFieldsByFieldId: options?.returnFieldsByFieldId ?? false,
+        },
+        retry,
+      }),
+    combine: combineRecords,
+  });
+}
 
-  let combinedResults: AirtableRecord<Fields>[] = [];
-
-  for (const chunk of chunks) {
-    const result = await airtableRequest<{
-      records: AirtableRecord<Fields>[];
-    }>({
-      apiKey,
-      baseId,
-      tableId,
-      endpoint: '',
-      method: 'POST',
-      body: {
-        records: chunk,
-        typecast: options?.typecast ?? false,
-        returnFieldsByFieldId: options?.returnFieldsByFieldId ?? false,
-      },
-      retry,
-    });
-    combinedResults = combinedResults.concat(result.records);
-    if (
-      records.length > chunkSize &&
-      chunks.indexOf(chunk) < chunks.length - 1
-    ) {
-      const interval: number = options?.requestInterval || 500;
-      await delay(interval);
-    }
-  }
-
-  return { records: combinedResults };
+/** Joins the `records` of each chunk's response, in request order. */
+function combineRecords<Row>(results: { records: Row[] }[]): {
+  records: Row[];
+} {
+  return { records: results.flatMap((result) => result.records) };
 }
