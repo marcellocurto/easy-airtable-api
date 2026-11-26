@@ -328,6 +328,8 @@ const records = await getRecords({
 
 The same `retry` option is supported by metadata helpers such as `listBases()` / `getBaseSchema()` and by `airtableRequestRaw()`.
 
+Requests that create something, such as `createRecord()`, `createRecords()`, `createBase()`, and `POST` requests sent with `airtableRequestRaw()`, are retried only after a `429` rate limit. Airtable may already have created the records when it returns a `5xx` or the connection drops, so the library does not send those requests again. Instead it throws the error, and you can check whether the records exist before trying again. Reads, updates, upserts, and deletes are retried as configured, including `getRecords()`, which uses `POST` to list records.
+
 ## Runtime examples
 
 ### Get a single record

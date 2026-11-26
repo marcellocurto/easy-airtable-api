@@ -46,6 +46,14 @@ export declare function airtableApiRequest<T>(request: {
     body?: unknown;
     apiURL?: string;
     retry?: AirtableRetryOptions;
+    /**
+     * Whether sending this request twice has the same effect as sending it
+     * once. Defaults to true for every method except POST. A request that is not
+     * safe to repeat is retried only after a 429, because Airtable rejects a
+     * rate-limited request without applying it. After a 5xx or a dropped
+     * connection it may already have been applied, so it is not resent.
+     */
+    idempotent?: boolean;
     requestContext?: {
         method: string;
         baseId?: string;
@@ -71,4 +79,5 @@ export declare function airtableRequest<T>(request: {
     body?: object;
     apiURL?: string;
     retry?: AirtableRetryOptions;
+    idempotent?: boolean;
 }): Promise<T>;

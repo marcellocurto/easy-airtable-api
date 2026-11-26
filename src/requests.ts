@@ -109,7 +109,8 @@ function resolveRetryOptions(
 function shouldRetryError(
   error: unknown,
   attempt: number,
-  retryOptions: Required<AirtableRetryOptions>
+  retryOptions: Required<AirtableRetryOptions>,
+  idempotent: boolean
 ): error is AirtableApiError {
   if (!(error instanceof AirtableApiError) || !error.retryable) {
     return false;
@@ -123,8 +124,10 @@ function shouldRetryError(
     return retryOptions.retryOn429;
   }
 
+  // A 5xx can arrive after Airtable applied the request, so only requests that
+  // are safe to repeat are retried.
   if (error.statusCode !== undefined && error.statusCode >= 500) {
-    return retryOptions.retryOn5xx;
+    return retryOptions.retryOn5xx && idempotent;
   }
 
   return false;
@@ -239,6 +242,14 @@ export async function airtableApiRequest<T>(request: {
   body?: unknown;
   apiURL?: string;
   retry?: AirtableRetryOptions;
+  /**
+   * Whether sending this request twice has the same effect as sending it
+   * once. Defaults to true for every method except POST. A request that is not
+   * safe to repeat is retried only after a 429, because Airtable rejects a
+   * rate-limited request without applying it. After a 5xx or a dropped
+   * connection it may already have been applied, so it is not resent.
+   */
+  idempotent?: boolean;
   requestContext?: {
     method: string;
     baseId?: string;
@@ -254,6 +265,7 @@ export async function airtableApiRequest<T>(request: {
     body,
     apiURL,
     retry,
+    idempotent = method !== 'POST',
     requestContext,
   } = request;
 
@@ -289,13 +301,14 @@ export async function airtableApiRequest<T>(request: {
 
       return response.data;
     } catch (error) {
-      if (shouldRetryError(error, attempt, retryOptions)) {
+      if (shouldRetryError(error, attempt, retryOptions, idempotent)) {
         await delay(getRetryDelayMs(error, attempt, retryOptions));
         continue;
       }
 
       if (
         error instanceof Error &&
+        idempotent &&
         retryOptions.retryOnNetworkErrors &&
         isRetryableNetworkError(error) &&
         attempt < retryOptions.maxRetries
@@ -350,8 +363,19 @@ export async function airtableRequest<T>(request: {
   body?: object;
   apiURL?: string;
   retry?: AirtableRetryOptions;
+  idempotent?: boolean;
 }): Promise<T> {
-  const { apiKey, baseId, tableId, endpoint, method, body, apiURL, retry } = request;
+  const {
+    apiKey,
+    baseId,
+    tableId,
+    endpoint,
+    method,
+    body,
+    apiURL,
+    retry,
+    idempotent,
+  } = request;
 
   if (!baseId) {
     throw new Error(
@@ -371,6 +395,7 @@ export async function airtableRequest<T>(request: {
     apiURL,
     path: `/${encodeURIComponent(baseId)}/${encodeURIComponent(tableId)}${endpoint}`,
     retry,
+    idempotent,
     requestContext: {
       method,
       baseId,
