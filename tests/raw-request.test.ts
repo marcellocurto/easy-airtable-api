@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { requestMock, sleepMock } = vi.hoisted(() => ({
   requestMock: vi.fn(),
-  sleepMock: vi.fn(() => Promise.resolve()),
+  sleepMock: vi.fn((_ms?: number) => Promise.resolve()),
 }));
 
 vi.mock('https', () => ({
@@ -303,6 +303,7 @@ describe('airtableRequestRaw', () => {
 
     expect(result).toEqual({ ok: true });
     expect(requestMock).toHaveBeenCalledTimes(2);
-    expect(sleepMock).toHaveBeenCalledWith(30000);
+    // At least Airtable's 30-second lockout, plus jitter.
+    expect(sleepMock.mock.calls[0][0]).toBeGreaterThanOrEqual(30000);
   });
 });

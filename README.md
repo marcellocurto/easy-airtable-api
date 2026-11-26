@@ -309,6 +309,38 @@ const schema = await airtableRequestRaw({
 
 It accepts either Airtable-style `/v0/...` paths or paths relative to the API root used internally.
 
+When you build a path from IDs or field names, encode each one with `encodePathSegment()`. It URL-encodes the value and throws for `.` and `..`, which URL parsing would otherwise collapse into a different path that still receives your token. The second argument names the value in that error. For example, to upload an attachment through Airtable's content API:
+
+```ts
+import { airtableRequestRaw, encodePathSegment } from 'easy-airtable-api';
+
+const record = await airtableRequestRaw({
+  apiKey: process.env.AIRTABLE_ACCESS_TOKEN!,
+  apiURL: 'https://content.airtable.com/v0',
+  method: 'POST',
+  path: `/${encodePathSegment(baseId, 'Base ID')}/${encodePathSegment(recordId, 'Record ID')}/${encodePathSegment('Photos', 'Field')}/uploadAttachment`,
+  body: { contentType: 'image/png', file: base64Png, filename: 'photo.png' },
+});
+```
+
+## Custom API URL
+
+The record helpers and `airtableRequestRaw()` accept an optional `apiURL` that replaces `https://api.airtable.com/v0`, for example to send requests through a proxy or to a local mock server. Its protocol, host, and port are used as given, so `http://127.0.0.1:8080/v0` works.
+
+```ts
+import { getRecord } from 'easy-airtable-api';
+
+const record = await getRecord({
+  apiKey: process.env.AIRTABLE_ACCESS_TOKEN!,
+  baseId: 'app123',
+  tableId: 'tbl123',
+  recordId: 'rec123',
+  apiURL: 'http://127.0.0.1:8080/v0',
+});
+```
+
+The metadata helpers `listBases()`, `getBaseSchema()`, and `createBase()` don't accept `apiURL` yet; use `airtableRequestRaw()` for those endpoints when you need a custom URL.
+
 ## Retry configuration
 
 All runtime helpers accept an optional top-level `retry` object for tuning retry behavior without leaving the library's shared request layer.
@@ -337,9 +369,10 @@ The same `retry` option is supported by metadata helpers such as `listBases()` /
 
 How long the library waits between attempts:
 
-- Normal retries back off exponentially from `baseDelayMs`, capped at `maxDelayMs` (30 seconds by default).
-- After a `429`, Airtable rejects every request for 30 seconds, so the library waits at least that long before retrying. If the response has a `Retry-After` header, the library waits at least that long instead.
-- If the wait the server asks for is longer than `maxDelayMs`, the library doesn't retry and throws the error right away. When the server sent a `Retry-After` header, the error's `retryAfterMs` holds it; a `429` without one leaves `retryAfterMs` unset, and Airtable's lockout is 30 seconds. With a `maxDelayMs` below 30 seconds, rate-limited requests therefore fail immediately.
+- Normal retries back off exponentially from `baseDelayMs`, capped at `maxDelayMs` (30 seconds by default). With `useJitter` on (the default), each wait is a random time between zero and that value.
+- After a `429`, Airtable rejects every request to the base for 30 seconds, so the library waits out those 30 seconds before retrying. If the response has a `Retry-After` header, whatever its status, the library waits that long instead.
+- With `useJitter` on, the library adds a random extra to that required wait: up to 5 seconds after the first `429`, then up to 10, then up to 20 seconds for each later one. Airtable locks the base again as soon as it sees more than 5 requests in a second, so requests that were refused together have to come back spread over several seconds to get through. The extra only ever adds to the required wait, so a retry never arrives early. With `useJitter: false`, the library waits exactly the required time.
+- If the required wait is longer than `maxDelayMs`, the library doesn't retry and throws the error right away. The random extra doesn't count against `maxDelayMs`, so with the default of 30 seconds a `429` is still retried, after 30 to 50 seconds. When the server sent a `Retry-After` header, the error's `retryAfterMs` holds it; a `429` without one leaves `retryAfterMs` unset, and Airtable's lockout is 30 seconds. With a `maxDelayMs` below 30 seconds, rate-limited requests therefore fail immediately.
 
 Network errors are retried when Node reports a connection failure: `ECONNRESET`, `ECONNREFUSED`, `ETIMEDOUT`, `EPIPE`, `ENETUNREACH`, `EHOSTUNREACH`, `EAI_AGAIN`, or `ENOTFOUND`. An attempt that receives no data for `timeoutMs` (five minutes by default) fails with `ETIMEDOUT` and is retried the same way.
 
@@ -546,6 +579,7 @@ import {
   createRecords,
   deleteRecord,
   deleteRecords,
+  encodePathSegment,
   getBaseSchema,
   getRecord,
   getRecords,

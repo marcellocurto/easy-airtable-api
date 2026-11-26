@@ -1,6 +1,6 @@
 {
   "name": "easy-airtable-api",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "type": "module",
   "description": "Lightweight TypeScript-first Airtable client with metadata-based type generation.",
   "main": "lib/index.js",

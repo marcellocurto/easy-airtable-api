@@ -1,79 +1,59 @@
 import { AirtableRecord, DeleteRecordResponse, DeleteRecordsResponse, GeneratedRecordFieldsCompatibleGetRecordOptions, GeneratedRecordFieldsCompatibleGetRecordsOptions, GetRecordQueryParameters, GetRecordsQueryParameters } from './types/records.js';
 import type { AirtableRetryOptions } from './requests.js';
-export declare function getRecord<Fields>({ apiKey, baseId, tableId, recordId, options, retry, }: {
+/**
+ * The table a record helper works on and how it reaches it. Each helper passes
+ * these on to `airtableRequest` unchanged.
+ */
+type TableRequestOptions = {
     apiKey: string;
     baseId: string;
     tableId: string;
+    /**
+     * The API root to send requests to instead of
+     * `https://api.airtable.com/v0`, such as a proxy or a mock server.
+     */
+    apiURL?: string;
+    retry?: AirtableRetryOptions;
+};
+export declare function getRecord<Fields>({ recordId, options, ...table }: TableRequestOptions & {
     recordId: string;
     options?: GeneratedRecordFieldsCompatibleGetRecordOptions;
-    retry?: AirtableRetryOptions;
 }): Promise<AirtableRecord<Fields>>;
-export declare function getRecord({ apiKey, baseId, tableId, recordId, options, retry, }: {
-    apiKey: string;
-    baseId: string;
-    tableId: string;
+export declare function getRecord({ recordId, options, ...table }: TableRequestOptions & {
     recordId: string;
     options?: GetRecordQueryParameters;
-    retry?: AirtableRetryOptions;
 }): Promise<AirtableRecord<Record<string, unknown>>>;
-export declare function getRecordsPage<Fields>({ apiKey, baseId, tableId, options, retry, }: {
-    apiKey: string;
-    baseId: string;
-    tableId: string;
+export declare function getRecordsPage<Fields>({ options, ...table }: TableRequestOptions & {
     options?: GeneratedRecordFieldsCompatibleGetRecordsOptions;
-    retry?: AirtableRetryOptions;
 }): Promise<{
     records: AirtableRecord<Fields>[];
     offset?: string;
 }>;
-export declare function getRecordsPage({ apiKey, baseId, tableId, options, retry, }: {
-    apiKey: string;
-    baseId: string;
-    tableId: string;
+export declare function getRecordsPage({ options, ...table }: TableRequestOptions & {
     options?: GetRecordsQueryParameters;
-    retry?: AirtableRetryOptions;
 }): Promise<{
     records: AirtableRecord<Record<string, unknown>>[];
     offset?: string;
 }>;
-export declare function iterateRecordsPages<Fields>({ apiKey, baseId, tableId, options, retry, }: {
-    apiKey: string;
-    baseId: string;
-    tableId: string;
+export declare function iterateRecordsPages<Fields>({ options, ...table }: TableRequestOptions & {
     options?: GeneratedRecordFieldsCompatibleGetRecordsOptions;
-    retry?: AirtableRetryOptions;
 }): AsyncGenerator<{
     records: AirtableRecord<Fields>[];
     offset?: string;
 }>;
-export declare function iterateRecordsPages({ apiKey, baseId, tableId, options, retry, }: {
-    apiKey: string;
-    baseId: string;
-    tableId: string;
+export declare function iterateRecordsPages({ options, ...table }: TableRequestOptions & {
     options?: GetRecordsQueryParameters;
-    retry?: AirtableRetryOptions;
 }): AsyncGenerator<{
     records: AirtableRecord<Record<string, unknown>>[];
     offset?: string;
 }>;
-export declare function getRecords<Fields>({ apiKey, baseId, tableId, options, retry, }: {
-    apiKey: string;
-    baseId: string;
-    tableId: string;
+export declare function getRecords<Fields>({ options, ...table }: TableRequestOptions & {
     options?: GeneratedRecordFieldsCompatibleGetRecordsOptions;
-    retry?: AirtableRetryOptions;
 }): Promise<AirtableRecord<Fields>[]>;
-export declare function getRecords({ apiKey, baseId, tableId, options, retry, }: {
-    apiKey: string;
-    baseId: string;
-    tableId: string;
+export declare function getRecords({ options, ...table }: TableRequestOptions & {
     options?: GetRecordsQueryParameters;
-    retry?: AirtableRetryOptions;
 }): Promise<AirtableRecord<Record<string, unknown>>[]>;
-export declare function updateRecord<Fields>({ apiKey, baseId, tableId, recordId, fields, options, retry, }: {
-    apiKey: string;
-    baseId: string;
-    tableId: string;
+export declare function updateRecord<Fields>({ recordId, fields, options, ...table }: TableRequestOptions & {
     recordId: string;
     fields: Fields;
     options?: {
@@ -81,24 +61,16 @@ export declare function updateRecord<Fields>({ apiKey, baseId, tableId, recordId
         returnFieldsByFieldId?: boolean;
         overwriteFieldsNotSpecified?: boolean;
     };
-    retry?: AirtableRetryOptions;
 }): Promise<AirtableRecord<Fields>>;
-export declare function replaceRecord<Fields>({ apiKey, baseId, tableId, recordId, fields, options, retry, }: {
-    apiKey: string;
-    baseId: string;
-    tableId: string;
+export declare function replaceRecord<Fields>({ recordId, fields, options, ...table }: TableRequestOptions & {
     recordId: string;
     fields: Fields;
     options?: {
         typecast?: boolean;
         returnFieldsByFieldId?: boolean;
     };
-    retry?: AirtableRetryOptions;
 }): Promise<AirtableRecord<Fields>>;
-export declare function updateRecords<Fields>({ apiKey, baseId, tableId, records, options, retry, }: {
-    apiKey: string;
-    baseId: string;
-    tableId: string;
+export declare function updateRecords<Fields>({ records, options, ...table }: TableRequestOptions & {
     records: {
         id: string;
         fields: Fields;
@@ -109,14 +81,10 @@ export declare function updateRecords<Fields>({ apiKey, baseId, tableId, records
         overwriteFieldsNotSpecified?: boolean;
         requestInterval?: number;
     };
-    retry?: AirtableRetryOptions;
 }): Promise<{
     records: AirtableRecord<Fields>[];
 }>;
-export declare function replaceRecords<Fields>({ apiKey, baseId, tableId, records, options, retry, }: {
-    apiKey: string;
-    baseId: string;
-    tableId: string;
+export declare function replaceRecords<Fields>({ records, options, ...table }: TableRequestOptions & {
     records: {
         id: string;
         fields: Fields;
@@ -126,14 +94,10 @@ export declare function replaceRecords<Fields>({ apiKey, baseId, tableId, record
         returnFieldsByFieldId?: boolean;
         requestInterval?: number;
     };
-    retry?: AirtableRetryOptions;
 }): Promise<{
     records: AirtableRecord<Fields>[];
 }>;
-export declare function updateRecordsUpsert<Fields>({ apiKey, baseId, tableId, records, options, retry, }: {
-    apiKey: string;
-    baseId: string;
-    tableId: string;
+export declare function updateRecordsUpsert<Fields>({ records, options, ...table }: TableRequestOptions & {
     records: {
         id?: string;
         fields: Fields;
@@ -145,44 +109,28 @@ export declare function updateRecordsUpsert<Fields>({ apiKey, baseId, tableId, r
         overwriteFieldsNotSpecified?: boolean;
         requestInterval?: number;
     };
-    retry?: AirtableRetryOptions;
 }): Promise<{
     createdRecords: string[];
     updatedRecords: string[];
     records: AirtableRecord<Fields>[];
 }>;
-export declare function deleteRecord({ apiKey, baseId, tableId, recordId, retry, }: {
-    apiKey: string;
-    baseId: string;
-    tableId: string;
+export declare function deleteRecord({ recordId, ...table }: TableRequestOptions & {
     recordId: string;
-    retry?: AirtableRetryOptions;
 }): Promise<DeleteRecordResponse>;
-export declare function deleteRecords({ apiKey, baseId, tableId, recordIds, options, retry, }: {
-    apiKey: string;
-    baseId: string;
-    tableId: string;
+export declare function deleteRecords({ recordIds, options, ...table }: TableRequestOptions & {
     recordIds: string[];
     options?: {
         requestInterval?: number;
     };
-    retry?: AirtableRetryOptions;
 }): Promise<DeleteRecordsResponse>;
-export declare function createRecord<Fields>({ apiKey, baseId, tableId, fields, options, retry, }: {
-    apiKey: string;
-    baseId: string;
-    tableId: string;
+export declare function createRecord<Fields>({ fields, options, ...table }: TableRequestOptions & {
     fields: Fields;
     options?: {
         typecast?: boolean;
         returnFieldsByFieldId?: boolean;
     };
-    retry?: AirtableRetryOptions;
 }): Promise<AirtableRecord<Fields>>;
-export declare function createRecords<Fields>({ apiKey, baseId, tableId, records, options, retry, }: {
-    apiKey: string;
-    baseId: string;
-    tableId: string;
+export declare function createRecords<Fields>({ records, options, ...table }: TableRequestOptions & {
     records: {
         fields: Fields;
     }[];
@@ -191,7 +139,7 @@ export declare function createRecords<Fields>({ apiKey, baseId, tableId, records
         returnFieldsByFieldId?: boolean;
         requestInterval?: number;
     };
-    retry?: AirtableRetryOptions;
 }): Promise<{
     records: AirtableRecord<Fields>[];
 }>;
+export {};
