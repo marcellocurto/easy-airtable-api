@@ -2,6 +2,7 @@ import { createServer, IncomingMessage, Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { encodePathSegment } from '../src/index.js';
 import { airtableRequestRaw } from '../src/requests.js';
 
 // A real local HTTP server, so the test shows where the request actually goes.
@@ -76,4 +77,26 @@ describe('apiURL', () => {
       expect(paths).toEqual(['/v0/meta/bases']);
     }
   );
+
+  it('sends a hand-built path with IDs encoded by encodePathSegment', async () => {
+    const paths: string[] = [];
+    const port = await startServer((req) => paths.push(req.url ?? ''));
+    const field = 'Photos & scans';
+
+    await airtableRequestRaw({
+      apiKey: 'pat123',
+      method: 'POST',
+      path: `/${encodePathSegment('app123', 'Base ID')}/${encodePathSegment('rec123', 'Record ID')}/${encodePathSegment(field, 'Field')}/uploadAttachment`,
+      body: { contentType: 'text/plain', file: 'aGk=', filename: 'hi.txt' },
+      apiURL: `http://127.0.0.1:${port}/v0`,
+      retry: { maxRetries: 0 },
+    });
+
+    expect(paths).toEqual([
+      '/v0/app123/rec123/Photos%20%26%20scans/uploadAttachment',
+    ]);
+    expect(() => encodePathSegment('..', 'Record ID')).toThrow(
+      'Record ID must not be "." or "..".'
+    );
+  });
 });

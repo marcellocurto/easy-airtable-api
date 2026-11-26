@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { requestMock, sleepMock } = vi.hoisted(() => ({
   requestMock: vi.fn(),
-  sleepMock: vi.fn(() => Promise.resolve()),
+  sleepMock: vi.fn((_ms?: number) => Promise.resolve()),
 }));
 
 vi.mock('https', () => ({
@@ -80,8 +80,8 @@ describe('airtableRequest retry exhaustion', () => {
     expect(requestMock).toHaveBeenCalledTimes(6);
     expect(sleepMock).toHaveBeenCalledTimes(5);
     // Each retry waits out Airtable's 30-second rate-limit lockout.
-    expect(sleepMock.mock.calls.map((call) => call[0])).toEqual([
-      30000, 30000, 30000, 30000, 30000,
-    ]);
+    for (const [ms] of sleepMock.mock.calls) {
+      expect(ms).toBeGreaterThanOrEqual(30000);
+    }
   });
 });

@@ -18,6 +18,37 @@ import type { AirtableRetryOptions } from './requests.js';
 import { delay } from './utils.js';
 
 /**
+ * The table a record helper works on and how it reaches it. Each helper passes
+ * these on to `airtableRequest` unchanged.
+ */
+type TableRequestOptions = {
+  apiKey: string;
+  baseId: string;
+  tableId: string;
+  /**
+   * The API root to send requests to instead of
+   * `https://api.airtable.com/v0`, such as a proxy or a mock server.
+   */
+  apiURL?: string;
+  retry?: AirtableRetryOptions;
+};
+
+/**
+ * Copies only the table settings from a helper's arguments. Spreading the
+ * caller's object instead would also pass on keys `airtableRequest` reads, such
+ * as `body` or `idempotent`, and change the request.
+ */
+function tableRequest({
+  apiKey,
+  baseId,
+  tableId,
+  apiURL,
+  retry,
+}: TableRequestOptions): TableRequestOptions {
+  return { apiKey, baseId, tableId, apiURL, retry };
+}
+
+/**
  * The path segment for one record. An empty ID would turn the path into the
  * table's list endpoint, so it is rejected before anything is sent;
  * `encodePathSegment` rejects `.` and `..` and encodes every other character,
@@ -33,49 +64,28 @@ function recordPath(recordId: string): string {
 }
 
 export function getRecord<Fields>({
-  apiKey,
-  baseId,
-  tableId,
   recordId,
   options,
-  retry,
-}: {
-  apiKey: string;
-  baseId: string;
-  tableId: string;
+  ...table
+}: TableRequestOptions & {
   recordId: string;
   options?: GeneratedRecordFieldsCompatibleGetRecordOptions;
-  retry?: AirtableRetryOptions;
 }): Promise<AirtableRecord<Fields>>;
 export function getRecord({
-  apiKey,
-  baseId,
-  tableId,
   recordId,
   options,
-  retry,
-}: {
-  apiKey: string;
-  baseId: string;
-  tableId: string;
+  ...table
+}: TableRequestOptions & {
   recordId: string;
   options?: GetRecordQueryParameters;
-  retry?: AirtableRetryOptions;
 }): Promise<AirtableRecord<Record<string, unknown>>>;
 export async function getRecord<Fields>({
-  apiKey,
-  baseId,
-  tableId,
   recordId,
   options,
-  retry,
-}: {
-  apiKey: string;
-  baseId: string;
-  tableId: string;
+  ...table
+}: TableRequestOptions & {
   recordId: string;
   options?: GetRecordQueryParameters;
-  retry?: AirtableRetryOptions;
 }): Promise<AirtableRecord<Fields>> {
   const endpoint = appendQueryToEndpoint(recordPath(recordId), {
     cellFormat: options?.cellFormat,
@@ -83,59 +93,35 @@ export async function getRecord<Fields>({
   });
 
   return await airtableRequest<AirtableRecord<Fields>>({
-    apiKey,
-    baseId,
-    tableId,
+    ...tableRequest(table),
     endpoint,
     method: 'GET',
-    retry,
   });
 }
 
 export function getRecordsPage<Fields>({
-  apiKey,
-  baseId,
-  tableId,
   options,
-  retry,
-}: {
-  apiKey: string;
-  baseId: string;
-  tableId: string;
+  ...table
+}: TableRequestOptions & {
   options?: GeneratedRecordFieldsCompatibleGetRecordsOptions;
-  retry?: AirtableRetryOptions;
 }): Promise<{
   records: AirtableRecord<Fields>[];
   offset?: string;
 }>;
 export function getRecordsPage({
-  apiKey,
-  baseId,
-  tableId,
   options,
-  retry,
-}: {
-  apiKey: string;
-  baseId: string;
-  tableId: string;
+  ...table
+}: TableRequestOptions & {
   options?: GetRecordsQueryParameters;
-  retry?: AirtableRetryOptions;
 }): Promise<{
   records: AirtableRecord<Record<string, unknown>>[];
   offset?: string;
 }>;
 export async function getRecordsPage<Fields>({
-  apiKey,
-  baseId,
-  tableId,
   options,
-  retry,
-}: {
-  apiKey: string;
-  baseId: string;
-  tableId: string;
+  ...table
+}: TableRequestOptions & {
   options?: GetRecordsQueryParameters;
-  retry?: AirtableRetryOptions;
 }): Promise<{
   records: AirtableRecord<Fields>[];
   offset?: string;
@@ -146,13 +132,10 @@ export async function getRecordsPage<Fields>({
     records: AirtableRecord<Fields>[];
     offset?: string;
   }>({
-    apiKey,
-    baseId,
-    tableId,
+    ...tableRequest(table),
     endpoint: '/listRecords',
     method: 'POST',
     body: options && toListRecordsBody(options),
-    retry,
     // listRecords only reads, so it is safe to resend despite using POST.
     idempotent: true,
   });
@@ -169,49 +152,28 @@ function toListRecordsBody(options: GetRecordsQueryParameters) {
 }
 
 export function iterateRecordsPages<Fields>({
-  apiKey,
-  baseId,
-  tableId,
   options,
-  retry,
-}: {
-  apiKey: string;
-  baseId: string;
-  tableId: string;
+  ...table
+}: TableRequestOptions & {
   options?: GeneratedRecordFieldsCompatibleGetRecordsOptions;
-  retry?: AirtableRetryOptions;
 }): AsyncGenerator<{
   records: AirtableRecord<Fields>[];
   offset?: string;
 }>;
 export function iterateRecordsPages({
-  apiKey,
-  baseId,
-  tableId,
   options,
-  retry,
-}: {
-  apiKey: string;
-  baseId: string;
-  tableId: string;
+  ...table
+}: TableRequestOptions & {
   options?: GetRecordsQueryParameters;
-  retry?: AirtableRetryOptions;
 }): AsyncGenerator<{
   records: AirtableRecord<Record<string, unknown>>[];
   offset?: string;
 }>;
 export async function* iterateRecordsPages<Fields>({
-  apiKey,
-  baseId,
-  tableId,
   options,
-  retry,
-}: {
-  apiKey: string;
-  baseId: string;
-  tableId: string;
+  ...table
+}: TableRequestOptions & {
   options?: GetRecordsQueryParameters;
-  retry?: AirtableRetryOptions;
 }): AsyncGenerator<{
   records: AirtableRecord<Fields>[];
   offset?: string;
@@ -223,11 +185,8 @@ export async function* iterateRecordsPages<Fields>({
       ? { ...options, offset: currentOffset }
       : options;
     const response = (await getRecordsPage({
-      apiKey,
-      baseId,
-      tableId,
+      ...tableRequest(table),
       options: requestBody,
-      retry,
     })) as {
       records: AirtableRecord<Fields>[];
       offset?: string;
@@ -243,53 +202,29 @@ export async function* iterateRecordsPages<Fields>({
 }
 
 export function getRecords<Fields>({
-  apiKey,
-  baseId,
-  tableId,
   options,
-  retry,
-}: {
-  apiKey: string;
-  baseId: string;
-  tableId: string;
+  ...table
+}: TableRequestOptions & {
   options?: GeneratedRecordFieldsCompatibleGetRecordsOptions;
-  retry?: AirtableRetryOptions;
 }): Promise<AirtableRecord<Fields>[]>;
 export function getRecords({
-  apiKey,
-  baseId,
-  tableId,
   options,
-  retry,
-}: {
-  apiKey: string;
-  baseId: string;
-  tableId: string;
+  ...table
+}: TableRequestOptions & {
   options?: GetRecordsQueryParameters;
-  retry?: AirtableRetryOptions;
 }): Promise<AirtableRecord<Record<string, unknown>>[]>;
 export async function getRecords<Fields>({
-  apiKey,
-  baseId,
-  tableId,
   options,
-  retry,
-}: {
-  apiKey: string;
-  baseId: string;
-  tableId: string;
+  ...table
+}: TableRequestOptions & {
   options?: GetRecordsQueryParameters;
-  retry?: AirtableRetryOptions;
 }): Promise<AirtableRecord<Fields>[]> {
   validateGetRecordsOptions(options);
   let records: AirtableRecord<Fields>[] = [];
 
   for await (const page of iterateRecordsPages({
-    apiKey,
-    baseId,
-    tableId,
+    ...tableRequest(table),
     options,
-    retry,
   }) as AsyncGenerator<{
     records: AirtableRecord<Fields>[];
     offset?: string;
@@ -312,17 +247,11 @@ function validateGetRecordsOptions(options?: GetRecordsQueryParameters) {
 }
 
 export async function updateRecord<Fields>({
-  apiKey,
-  baseId,
-  tableId,
   recordId,
   fields,
   options,
-  retry,
-}: {
-  apiKey: string;
-  baseId: string;
-  tableId: string;
+  ...table
+}: TableRequestOptions & {
   recordId: string;
   fields: Fields;
   options?: {
@@ -330,12 +259,9 @@ export async function updateRecord<Fields>({
     returnFieldsByFieldId?: boolean;
     overwriteFieldsNotSpecified?: boolean;
   };
-  retry?: AirtableRetryOptions;
 }): Promise<AirtableRecord<Fields>> {
   return await airtableRequest<AirtableRecord<Fields>>({
-    apiKey,
-    baseId,
-    tableId,
+    ...tableRequest(table),
     endpoint: recordPath(recordId),
     method: options?.overwriteFieldsNotSpecified === true ? 'PUT' : 'PATCH',
     body: {
@@ -344,34 +270,24 @@ export async function updateRecord<Fields>({
       returnFieldsByFieldId:
         options?.returnFieldsByFieldId === true ? true : false,
     },
-    retry,
   });
 }
 
 export async function replaceRecord<Fields>({
-  apiKey,
-  baseId,
-  tableId,
   recordId,
   fields,
   options,
-  retry,
-}: {
-  apiKey: string;
-  baseId: string;
-  tableId: string;
+  ...table
+}: TableRequestOptions & {
   recordId: string;
   fields: Fields;
   options?: {
     typecast?: boolean;
     returnFieldsByFieldId?: boolean;
   };
-  retry?: AirtableRetryOptions;
 }): Promise<AirtableRecord<Fields>> {
   return await airtableRequest<AirtableRecord<Fields>>({
-    apiKey,
-    baseId,
-    tableId,
+    ...tableRequest(table),
     endpoint: recordPath(recordId),
     method: 'PUT',
     body: {
@@ -379,21 +295,14 @@ export async function replaceRecord<Fields>({
       typecast: options?.typecast ?? false,
       returnFieldsByFieldId: options?.returnFieldsByFieldId ?? false,
     },
-    retry,
   });
 }
 
 export async function updateRecords<Fields>({
-  apiKey,
-  baseId,
-  tableId,
   records,
   options,
-  retry,
-}: {
-  apiKey: string;
-  baseId: string;
-  tableId: string;
+  ...table
+}: TableRequestOptions & {
   records: { id: string; fields: Fields }[];
   options?: {
     typecast?: boolean;
@@ -401,7 +310,6 @@ export async function updateRecords<Fields>({
     overwriteFieldsNotSpecified?: boolean;
     requestInterval?: number;
   };
-  retry?: AirtableRetryOptions;
 }): Promise<{
   records: AirtableRecord<Fields>[];
 }> {
@@ -416,9 +324,7 @@ export async function updateRecords<Fields>({
     requestInterval: options?.requestInterval,
     send: (chunk) =>
       airtableRequest<{ records: AirtableRecord<Fields>[] }>({
-        apiKey,
-        baseId,
-        tableId,
+        ...tableRequest(table),
         endpoint: '/',
         method: options?.overwriteFieldsNotSpecified === true ? 'PUT' : 'PATCH',
         body: {
@@ -426,30 +332,22 @@ export async function updateRecords<Fields>({
           typecast: options?.typecast ?? false,
           returnFieldsByFieldId: options?.returnFieldsByFieldId ?? false,
         },
-        retry,
       }),
     combine: combineRecords,
   });
 }
 
 export async function replaceRecords<Fields>({
-  apiKey,
-  baseId,
-  tableId,
   records,
   options,
-  retry,
-}: {
-  apiKey: string;
-  baseId: string;
-  tableId: string;
+  ...table
+}: TableRequestOptions & {
   records: { id: string; fields: Fields }[];
   options?: {
     typecast?: boolean;
     returnFieldsByFieldId?: boolean;
     requestInterval?: number;
   };
-  retry?: AirtableRetryOptions;
 }): Promise<{
   records: AirtableRecord<Fields>[];
 }> {
@@ -464,9 +362,7 @@ export async function replaceRecords<Fields>({
     requestInterval: options?.requestInterval,
     send: (chunk) =>
       airtableRequest<{ records: AirtableRecord<Fields>[] }>({
-        apiKey,
-        baseId,
-        tableId,
+        ...tableRequest(table),
         endpoint: '/',
         method: 'PUT',
         body: {
@@ -474,23 +370,16 @@ export async function replaceRecords<Fields>({
           typecast: options?.typecast ?? false,
           returnFieldsByFieldId: options?.returnFieldsByFieldId ?? false,
         },
-        retry,
       }),
     combine: combineRecords,
   });
 }
 
 export async function updateRecordsUpsert<Fields>({
-  apiKey,
-  baseId,
-  tableId,
   records,
   options,
-  retry,
-}: {
-  apiKey: string;
-  baseId: string;
-  tableId: string;
+  ...table
+}: TableRequestOptions & {
   records: { id?: string; fields: Fields }[];
   options?: {
     fieldsToMergeOn: string[];
@@ -499,7 +388,6 @@ export async function updateRecordsUpsert<Fields>({
     overwriteFieldsNotSpecified?: boolean;
     requestInterval?: number;
   };
-  retry?: AirtableRetryOptions;
 }): Promise<{
   createdRecords: string[];
   updatedRecords: string[];
@@ -529,9 +417,7 @@ export async function updateRecordsUpsert<Fields>({
         updatedRecords: string[];
         records: AirtableRecord<Fields>[];
       }>({
-        apiKey,
-        baseId,
-        tableId,
+        ...tableRequest(table),
         endpoint: '/',
         method: options.overwriteFieldsNotSpecified === true ? 'PUT' : 'PATCH',
         body: {
@@ -540,7 +426,6 @@ export async function updateRecordsUpsert<Fields>({
           returnFieldsByFieldId: options.returnFieldsByFieldId ?? false,
           performUpsert: { fieldsToMergeOn },
         },
-        retry,
       }),
     combine: (results) => ({
       createdRecords: results.flatMap((result) => result.createdRecords),
@@ -551,26 +436,16 @@ export async function updateRecordsUpsert<Fields>({
 }
 
 export async function deleteRecord({
-  apiKey,
-  baseId,
-  tableId,
   recordId,
-  retry,
-}: {
-  apiKey: string;
-  baseId: string;
-  tableId: string;
+  ...table
+}: TableRequestOptions & {
   recordId: string;
-  retry?: AirtableRetryOptions;
 }): Promise<DeleteRecordResponse> {
   try {
     return await airtableRequest<DeleteRecordResponse>({
-      apiKey,
-      baseId,
-      tableId,
+      ...tableRequest(table),
       endpoint: recordPath(recordId),
       method: 'DELETE',
-      retry,
     });
   } catch (error) {
     if (isGoneAfterRetry(error)) return { id: recordId, deleted: true };
@@ -592,19 +467,12 @@ function isGoneAfterRetry(error: unknown): boolean {
 }
 
 export async function deleteRecords({
-  apiKey,
-  baseId,
-  tableId,
   recordIds,
   options,
-  retry,
-}: {
-  apiKey: string;
-  baseId: string;
-  tableId: string;
+  ...table
+}: TableRequestOptions & {
   recordIds: string[];
   options?: { requestInterval?: number };
-  retry?: AirtableRetryOptions;
 }): Promise<DeleteRecordsResponse> {
   if (!Array.isArray(recordIds) || recordIds.length === 0) {
     throw new Error(
@@ -617,41 +485,29 @@ export async function deleteRecords({
     requestInterval: options?.requestInterval,
     send: (chunk) =>
       airtableRequest<DeleteRecordsResponse>({
-        apiKey,
-        baseId,
-        tableId,
+        ...tableRequest(table),
         endpoint: appendQueryToEndpoint('', {
           'records[]': chunk,
         }),
         method: 'DELETE',
-        retry,
       }),
     combine: combineRecords,
   });
 }
 
 export async function createRecord<Fields>({
-  apiKey,
-  baseId,
-  tableId,
   fields,
   options,
-  retry,
-}: {
-  apiKey: string;
-  baseId: string;
-  tableId: string;
+  ...table
+}: TableRequestOptions & {
   fields: Fields;
   options?: {
     typecast?: boolean;
     returnFieldsByFieldId?: boolean;
   };
-  retry?: AirtableRetryOptions;
 }): Promise<AirtableRecord<Fields>> {
   return await airtableRequest<AirtableRecord<Fields>>({
-    apiKey,
-    baseId,
-    tableId,
+    ...tableRequest(table),
     endpoint: '',
     method: 'POST',
     body: {
@@ -659,28 +515,20 @@ export async function createRecord<Fields>({
       typecast: options?.typecast ?? false,
       returnFieldsByFieldId: options?.returnFieldsByFieldId ?? false,
     },
-    retry,
   });
 }
 
 export async function createRecords<Fields>({
-  apiKey,
-  baseId,
-  tableId,
   records,
   options,
-  retry,
-}: {
-  apiKey: string;
-  baseId: string;
-  tableId: string;
+  ...table
+}: TableRequestOptions & {
   records: { fields: Fields }[];
   options?: {
     typecast?: boolean;
     returnFieldsByFieldId?: boolean;
     requestInterval?: number;
   };
-  retry?: AirtableRetryOptions;
 }): Promise<{
   records: AirtableRecord<Fields>[];
 }> {
@@ -695,9 +543,7 @@ export async function createRecords<Fields>({
     requestInterval: options?.requestInterval,
     send: (chunk) =>
       airtableRequest<{ records: AirtableRecord<Fields>[] }>({
-        apiKey,
-        baseId,
-        tableId,
+        ...tableRequest(table),
         endpoint: '',
         method: 'POST',
         body: {
@@ -705,7 +551,6 @@ export async function createRecords<Fields>({
           typecast: options?.typecast ?? false,
           returnFieldsByFieldId: options?.returnFieldsByFieldId ?? false,
         },
-        retry,
       }),
     combine: combineRecords,
   });

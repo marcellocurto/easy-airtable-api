@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { requestMock, sleepMock } = vi.hoisted(() => ({
   requestMock: vi.fn(),
-  sleepMock: vi.fn(() => Promise.resolve()),
+  sleepMock: vi.fn((_ms?: number) => Promise.resolve()),
 }));
 
 vi.mock('https', () => ({
@@ -19,6 +19,7 @@ vi.mock('../src/utils.js', async () => {
 });
 
 import { airtableRequestRaw } from '../src/requests.js';
+import type { AirtableRetryOptions } from '../src/requests.js';
 
 type FakeRequest = EventEmitter & {
   write: (chunk: string) => void;
@@ -71,7 +72,7 @@ const rateLimited = JSON.stringify({
   error: { type: 'RATE_LIMIT_REACHED', message: 'Rate limit exceeded' },
 });
 
-function get(retry?: { maxDelayMs?: number }) {
+function get(retry?: AirtableRetryOptions) {
   return airtableRequestRaw({
     apiKey: 'pat123',
     method: 'GET',
@@ -87,14 +88,72 @@ describe('retry timing', () => {
     sleepMock.mockResolvedValue(undefined);
   });
 
-  it("waits out Airtable's 30-second rate-limit lockout before retrying a 429", async () => {
-    requestMock
-      .mockImplementationOnce(respondWith(429, rateLimited))
-      .mockImplementationOnce(respondWith(200, ok));
+  /** Sends `count` requests that each get a 429, then succeed on the retry. */
+  async function delaysAfterOne429(
+    count: number,
+    headers: Record<string, string> = {},
+    retry?: AirtableRetryOptions
+  ) {
+    for (let i = 0; i < count; i += 1) {
+      requestMock
+        .mockImplementationOnce(respondWith(429, rateLimited, headers))
+        .mockImplementationOnce(respondWith(200, ok));
+      await expect(get(retry)).resolves.toEqual({ ok: true });
+    }
+    return sleepMock.mock.calls.map(([ms]) => ms);
+  }
 
-    await expect(get()).resolves.toEqual({ ok: true });
-    expect(sleepMock).toHaveBeenCalledTimes(1);
-    expect(sleepMock).toHaveBeenCalledWith(30000);
+  it("spreads retries after a 429 over the 5 seconds after Airtable's 30-second lockout", async () => {
+    const delays = await delaysAfterOne429(20);
+
+    expect(delays).toHaveLength(20);
+    for (const ms of delays) {
+      expect(ms).toBeGreaterThanOrEqual(30000);
+      expect(ms).toBeLessThanOrEqual(35000);
+    }
+    expect(new Set(delays).size).toBeGreaterThan(1);
+  });
+
+  it('spreads retries after a 429 over the 5 seconds after its Retry-After', async () => {
+    const delays = await delaysAfterOne429(20, { 'retry-after': '10' });
+
+    for (const ms of delays) {
+      expect(ms).toBeGreaterThanOrEqual(10000);
+      expect(ms).toBeLessThanOrEqual(15000);
+    }
+    expect(new Set(delays).size).toBeGreaterThan(1);
+  });
+
+  it('waits exactly the required time after a 429 when useJitter is off', async () => {
+    expect(await delaysAfterOne429(3, {}, { useJitter: false })).toEqual([
+      30000, 30000, 30000,
+    ]);
+    sleepMock.mockClear();
+    expect(
+      await delaysAfterOne429(1, { 'retry-after': '10' }, { useJitter: false })
+    ).toEqual([10000]);
+  });
+
+  it('widens the spread after each further 429, up to 20 seconds', async () => {
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.99);
+    try {
+      requestMock
+        .mockImplementationOnce(respondWith(429, rateLimited))
+        .mockImplementationOnce(respondWith(429, rateLimited))
+        .mockImplementationOnce(respondWith(429, rateLimited))
+        .mockImplementationOnce(respondWith(429, rateLimited))
+        .mockImplementationOnce(respondWith(200, ok));
+
+      await expect(get()).resolves.toEqual({ ok: true });
+      expect(sleepMock.mock.calls.map(([ms]) => ms)).toEqual([
+        30000 + 4950,
+        30000 + 9900,
+        30000 + 19800,
+        30000 + 19800,
+      ]);
+    } finally {
+      randomSpy.mockRestore();
+    }
   });
 
   it('fails without waiting when Retry-After asks for longer than maxDelayMs', async () => {
