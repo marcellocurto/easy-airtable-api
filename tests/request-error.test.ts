@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { requestMock, sleepMock } = vi.hoisted(() => ({
   requestMock: vi.fn(),
-  sleepMock: vi.fn(() => Promise.resolve()),
+  sleepMock: vi.fn((_ms?: number) => Promise.resolve()),
 }));
 
 vi.mock('https', () => ({
@@ -173,7 +173,8 @@ describe('airtableRequest errors', () => {
       fields: { Name: 'Recovered' },
     });
     expect(requestMock).toHaveBeenCalledTimes(2);
-    expect(sleepMock).toHaveBeenCalledWith(30000);
+    // At least Airtable's 30-second lockout, plus jitter.
+    expect(sleepMock.mock.calls[0][0]).toBeGreaterThanOrEqual(30000);
   });
 
   it('prefers Retry-After when Airtable rate limits a request', async () => {
@@ -258,7 +259,10 @@ describe('airtableRequest errors', () => {
 
     expect(result.id).toBe('rec999');
     expect(requestMock).toHaveBeenCalledTimes(2);
-    expect(sleepMock).toHaveBeenCalledWith(2000);
+    // At least the 2-second Retry-After plus jitter, instead of the 30-second
+    // lockout.
+    expect(sleepMock.mock.calls[0][0]).toBeGreaterThanOrEqual(2000);
+    expect(sleepMock.mock.calls[0][0]).toBeLessThan(30000);
   });
 
   it('retries a transient 503 response and later succeeds', async () => {

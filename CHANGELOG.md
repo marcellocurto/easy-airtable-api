@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.2
+
+### Fixed
+
+- Retries after a `429` no longer arrive in lockstep. Every caller used to wait exactly 30 seconds, so requests refused together retried in the same second and triggered the next lockout. With `useJitter` on (the default), the library now waits the required time (Airtable's 30-second lockout or `Retry-After`) plus a random extra of up to 5 seconds, widening to 10 and then 20 seconds on later retries. The extra never shortens the required wait and doesn't count against `maxDelayMs`. With `useJitter: false`, the wait is exactly the required time.
+
+### Added
+
+- The record helpers accept `apiURL`, like `airtableRequestRaw()`, so they can be pointed at a proxy or a mock server.
+- `encodePathSegment()` is exported for building `airtableRequestRaw()` paths from IDs, such as `uploadAttachment` paths.
+
 ## 0.2.1
 
 ### Fixed
