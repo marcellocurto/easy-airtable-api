@@ -15,9 +15,11 @@ async function loadFixture(name: string): Promise<AirtableBaseSchema> {
 async function compileGeneratedOutput({
   generatedContent,
   usageSource = '',
+  compilerOptions = {},
 }: {
   generatedContent: string;
   usageSource?: string;
+  compilerOptions?: Record<string, unknown>;
 }): Promise<void> {
   const tempDirectory = await mkdtemp(join(tmpdir(), 'easy-airtable-api-codegen-'));
   const generatedPath = join(tempDirectory, 'airtable.generated.ts');
@@ -33,6 +35,7 @@ async function compileGeneratedOutput({
         compilerOptions: {
           strict: true,
           noEmit: true,
+          ...compilerOptions,
           skipLibCheck: true,
           module: 'ESNext',
           target: 'ESNext',
@@ -288,6 +291,113 @@ describe('Airtable codegen', () => {
       'export type ProjectRecord = "Kept" | (string & {});'
     );
     await compileGeneratedOutput({ generatedContent: result.content });
+  });
+
+  it.each(['read', 'write', 'full'] as const)(
+    'imports only the shared types a %s-mode file uses',
+    async (schemaMode) => {
+      const schema = await loadFixture('base-schema.json');
+      schema.tables[0].fields.push({
+        id: 'fldNamedLikeTypes',
+        name: 'Kind',
+        type: 'singleSelect',
+        // Choices named like shared types must not count as uses of them.
+        options: {
+          choices: [
+            { id: 'selA', name: 'Attachment' },
+            { id: 'selB', name: 'Collaborator' },
+          ],
+        },
+      });
+
+      const result = await buildAirtableTypes({
+        source: { schema },
+        schemaMode,
+      });
+
+      await compileGeneratedOutput({
+        generatedContent: result.content,
+        compilerOptions: { noUnusedLocals: true },
+      });
+    }
+  );
+
+  it('keeps line breaks in a table name inside the generated comment', async () => {
+    const result = await buildAirtableTypes({
+      source: {
+        schema: {
+          tables: [
+            {
+              id: 'tblInjected01',
+              name: 'Evil\nexport const a = 1;\rexport const b = 2;\u2028export const c = 3;\n//',
+              primaryFieldId: 'fldName00001',
+              fields: [
+                { id: 'fldName00001', name: 'Name', type: 'singleLineText' },
+              ],
+            },
+          ],
+        },
+      },
+    });
+
+    // TypeScript ends a `//` comment at any of these line terminators.
+    const lines = result.content.split(/\r\n|[\r\n\u2028\u2029]/);
+    expect(lines.filter((line) => /^export const [abc] =/.test(line))).toEqual(
+      []
+    );
+    await compileGeneratedOutput({ generatedContent: result.content });
+  });
+
+  it('types sync source fields as readonly choices', async () => {
+    const result = await buildAirtableTypes({
+      source: {
+        schema: {
+          tables: [
+            {
+              id: 'tblSynced0001',
+              name: 'Synced',
+              primaryFieldId: 'fldName00001',
+              fields: [
+                { id: 'fldName00001', name: 'Name', type: 'singleLineText' },
+                {
+                  // The older type name for the same field.
+                  id: 'fldLegacy0001',
+                  name: 'Legacy Source',
+                  type: 'syncSource',
+                  options: { choices: [{ id: 'sel3', name: 'Asana' }] },
+                },
+                {
+                  id: 'fldSource0001',
+                  name: 'Source',
+                  type: 'externalSyncSource',
+                  options: {
+                    choices: [
+                      { id: 'sel1', name: 'Salesforce' },
+                      { id: 'sel2', name: 'Jira' },
+                    ],
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      },
+      enumMode: 'literal',
+    });
+
+    const recordFields =
+      result.content
+        .split('export interface SyncedRecordFields {')[1]
+        ?.split('}')[0] ?? '';
+    const createFields =
+      result.content
+        .split('export interface SyncedCreateFields {')[1]
+        ?.split('}')[0] ?? '';
+
+    expect(recordFields).toContain('"Source"?: "Salesforce" | "Jira";');
+    expect(recordFields).toContain('"Legacy Source"?: "Asana";');
+    expect(createFields).not.toContain('"Source"');
+    expect(result.warnings).toEqual([]);
   });
 
   it('resolves sanitized name collisions and can generate from a schema file', async () => {

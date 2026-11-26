@@ -6,7 +6,11 @@ import {
   toSafeConstKey,
 } from './identifiers.js';
 import { mapFieldToNormalizedField } from './map-field.js';
-import { createTypeNameRegistry, type TableTypeNames } from './type-names.js';
+import {
+  createTypeNameRegistry,
+  emittedInterfaces,
+  type TableTypeNames,
+} from './type-names.js';
 import type {
   EnumMode,
   NormalizedBase,
@@ -77,8 +81,7 @@ export function normalizeSchema({
   // Every table claims its interface names before any select alias does, so
   // table types keep their plain names and the aliases take the suffixes. Only
   // the interfaces this schema mode emits claim a name.
-  const emitsRead = schemaMode !== 'write';
-  const emitsWrite = schemaMode !== 'read';
+  const emits = emittedInterfaces(schemaMode);
   const tableTypeNames: TableTypeNames[] = selectedTables.map((table) => {
     const tsName = tableNames.get(table.id) ?? table.name;
     const claim = (suffix: string, emitted: boolean) =>
@@ -87,10 +90,10 @@ export function normalizeSchema({
         : `${tsName}${suffix}`;
 
     return {
-      recordFields: claim('RecordFields', emitsRead),
-      record: claim('Record', emitsRead),
-      createFields: claim('CreateFields', emitsWrite),
-      updateFields: claim('UpdateFields', emitsWrite),
+      recordFields: claim('RecordFields', emits.read),
+      record: claim('Record', emits.read),
+      createFields: claim('CreateFields', emits.write),
+      updateFields: claim('UpdateFields', emits.write),
     };
   });
 

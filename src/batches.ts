@@ -3,7 +3,8 @@ import { delay, getErrorMessage } from './utils.js';
 /** Airtable accepts at most 10 records per create, update, or delete request. */
 const BATCH_SIZE = 10;
 
-const DEFAULT_REQUEST_INTERVAL_MS = 500;
+/** The pause between requests when the caller doesn't set `requestInterval`. */
+export const DEFAULT_REQUEST_INTERVAL_MS = 500;
 
 /**
  * Thrown by the batch helpers when a request fails after earlier requests in
@@ -63,7 +64,7 @@ export async function sendInChunks<Item, ChunkResult, Result>({
 
   for (let start = 0; start < items.length; start += BATCH_SIZE) {
     if (start > 0) {
-      await delay(requestInterval || DEFAULT_REQUEST_INTERVAL_MS);
+      await delay(requestInterval ?? DEFAULT_REQUEST_INTERVAL_MS);
     }
 
     try {

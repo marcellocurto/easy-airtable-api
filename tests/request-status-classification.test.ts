@@ -137,4 +137,16 @@ describe('response status classification', () => {
       expect(requestMock).toHaveBeenCalledTimes(1);
     }
   );
+
+  it('keeps a long non-JSON 2xx body out of the error message', async () => {
+    const page = `<html>${'x'.repeat(5000)}</html>`;
+    requestMock.mockImplementationOnce(respondWith(200, page));
+
+    const error = await get().catch((caught) => caught);
+
+    expect(error.message).toMatch(
+      /^Failed to parse response as JSON: <html>x+/
+    );
+    expect(error.message.length).toBeLessThan(400);
+  });
 });

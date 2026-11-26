@@ -26,7 +26,7 @@
     "lint": "eslint 'src/**/*.{ts,tsx}'",
     "test": "npm run test:all",
     "test:codegen": "vitest run tests/codegen.test.ts",
-    "test:integration": "RUN_AIRTABLE_INTEGRATION_TESTS=true vitest run tests/get-record.test.ts tests/get-records.test.ts tests/create-records.test.ts tests/update-records.test.ts tests/delete-records.test.ts",
+    "test:integration": "RUN_AIRTABLE_INTEGRATION_TESTS=true vitest run tests/get-record.test.ts tests/get-records.test.ts tests/create-records.test.ts tests/update-records.test.ts tests/delete-records.test.ts tests/create-base.integration.test.ts tests/get-base-schema.integration.test.ts",
     "test:all": "vitest run"
   },
   "keywords": [

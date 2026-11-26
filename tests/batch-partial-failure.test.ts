@@ -180,4 +180,21 @@ describe.each([
     );
     expect((error as AirtableBatchError).pending).toEqual(updates.slice(10));
   });
+
+  it('does not pause between chunks when requestInterval is 0', async () => {
+    vi.mocked(airtableRequest)
+      .mockResolvedValueOnce(createdChunk(1, 10))
+      .mockResolvedValueOnce(createdChunk(11, 2));
+
+    await helper({
+      ...target,
+      records: Array.from({ length: 12 }, (_, index) => ({
+        id: `rec${index + 1}`,
+        fields: { Name: `Record ${index + 1}` },
+      })),
+      options: { requestInterval: 0 },
+    });
+
+    expect(delayMock.mock.calls.filter(([ms]) => ms > 0)).toEqual([]);
+  });
 });

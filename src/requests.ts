@@ -287,7 +287,6 @@ export async function airtableApiRequest<T>(request: {
     body,
     apiURL,
     retry,
-    idempotent = method !== 'POST',
     requestContext,
   } = request;
 
@@ -306,6 +305,10 @@ export async function airtableApiRequest<T>(request: {
     method,
     path: resolvedPath,
   };
+  // JavaScript callers can pass a lowercase method, which Node still sends as
+  // POST, or none, which Node sends as GET.
+  const idempotent =
+    request.idempotent ?? (method ?? 'GET').toUpperCase() !== 'POST';
   const retryOptions = idempotent
     ? resolveRetryOptions(retry)
     : {
@@ -497,6 +500,15 @@ function readAirtableError(
   }
 }
 
+const MAX_BODY_IN_MESSAGE = 200;
+
+/** Keeps an unexpected response body short enough to log. */
+function truncateForMessage(body: string): string {
+  return body.length > MAX_BODY_IN_MESSAGE
+    ? `${body.slice(0, MAX_BODY_IN_MESSAGE)}…`
+    : body;
+}
+
 /**
  * Returns the parsed JSON body of a 2xx response, or undefined for a 204 No
  * Content. Any other status throws an AirtableApiError carrying the status
@@ -514,7 +526,9 @@ function parseResponse<T>(
     try {
       return JSON.parse(body) as T;
     } catch {
-      throw new Error(`Failed to parse response as JSON: ${body}`);
+      throw new Error(
+        `Failed to parse response as JSON: ${truncateForMessage(body)}`
+      );
     }
   }
 
@@ -543,13 +557,16 @@ async function apiRequest({
 }: ApiRequest): Promise<ApiResponse> {
   return new Promise<ApiResponse>((resolve, reject) => {
     const { protocol, hostname, port, pathname, search } = new URL(url);
+    // URL keeps the brackets around an IPv6 literal, but Node expects the bare
+    // address.
+    const host = hostname.replace(/^\[(.*)\]$/, '$1');
     // A custom apiURL can point at a plain-HTTP proxy or mock server on any
     // port, so both come from the URL rather than defaulting to HTTPS on 443.
     const send = protocol === 'http:' ? httpRequest : httpsRequest;
 
     const options: RequestOptions = {
       method,
-      hostname,
+      hostname: host,
       port,
       path: `${pathname}${search}`,
       timeout: 300000,
@@ -557,6 +574,15 @@ async function apiRequest({
         'Content-Type': 'application/json',
         Authorization: `Bearer ${apiKey}`,
       },
+    };
+
+    // The original error stays as `cause` so retries can read its Node code.
+    const rejectWithCause = (error: Error) => {
+      reject(
+        new Error(`airtableApi: ${error.message} (fn_${apiRequest.name})`, {
+          cause: error,
+        })
+      );
     };
 
     const req = send(options, (res: IncomingMessage) => {
@@ -575,6 +601,11 @@ async function apiRequest({
           headers: res.headers,
         });
       });
+
+      // A connection that drops after the headers fires neither `end` nor the
+      // request's timeout. Node reports it here as an ECONNRESET error, which
+      // the retry logic treats as a dropped connection.
+      res.on('error', rejectWithCause);
     });
 
     // Node only reports an idle socket; without destroying the request here,
@@ -591,14 +622,7 @@ async function apiRequest({
       );
     });
 
-    // The original error stays as `cause` so retries can read its Node code.
-    req.on('error', (error: Error) => {
-      reject(
-        new Error(`airtableApi: ${error.message} (fn_${apiRequest.name})`, {
-          cause: error,
-        })
-      );
-    });
+    req.on('error', rejectWithCause);
 
     if (body) {
       req.write(JSON.stringify(body));

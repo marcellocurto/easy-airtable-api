@@ -1,5 +1,16 @@
+import type { SchemaMode } from './types.js';
 /** Shared field/value types every generated file imports from the package. */
 export declare const SHARED_TYPE_IMPORTS: readonly ["AICell", "AirtableRecord", "Attachment", "AttachmentWrite", "BarcodeCell", "BarcodeWrite", "ButtonCell", "Collaborator", "CollaboratorWrite"];
+/** Which of a table's interfaces a schema mode emits. */
+export declare function emittedInterfaces(schemaMode: SchemaMode): {
+    read: boolean;
+    write: boolean;
+};
+/**
+ * The shared types that the given generated declarations refer to, in import
+ * order, so a generated file imports only what it uses.
+ */
+export declare function usedSharedTypes(declarations: string[]): string[];
 export interface TableTypeNames {
     recordFields: string;
     record: string;

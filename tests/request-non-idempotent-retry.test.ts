@@ -18,7 +18,12 @@ vi.mock('../src/utils.js', async () => {
   };
 });
 
-import { createRecords, getRecordsPage, updateRecords } from '../src/index.js';
+import {
+  airtableRequestRaw,
+  createRecords,
+  getRecordsPage,
+  updateRecords,
+} from '../src/index.js';
 
 type FakeRequest = EventEmitter & {
   write: (chunk: string) => void;
@@ -152,5 +157,35 @@ describe('retries for requests that are not safe to repeat', () => {
 
     expect(result.records.map((record) => record.id)).toEqual(['rec1']);
     expect(requestMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('treats a lowercase post from a JavaScript caller as a create that is not resent', async () => {
+    requestMock
+      .mockImplementationOnce(respondWith(503, {}))
+      .mockImplementationOnce(respondWith(200, created));
+
+    await expect(
+      airtableRequestRaw({
+        apiKey: 'pat123',
+        // JavaScript callers aren't held to the uppercase method type.
+        method: 'post' as 'POST',
+        path: '/app123/tbl123',
+        body: { records: [{ fields: { Name: 'A' } }] },
+      })
+    ).rejects.toMatchObject({ statusCode: 503 });
+    expect(requestMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('sends a request with no method, as a JavaScript caller might, instead of throwing', async () => {
+    requestMock.mockImplementationOnce(respondWith(200, created));
+
+    await expect(
+      airtableRequestRaw({
+        apiKey: 'pat123',
+        // JavaScript callers aren't held to the required method type.
+        method: undefined as unknown as 'GET',
+        path: '/app123/tbl123',
+      })
+    ).resolves.toEqual(created);
   });
 });

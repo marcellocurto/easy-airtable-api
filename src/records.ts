@@ -7,10 +7,22 @@ import {
   GetRecordQueryParameters,
   GetRecordsQueryParameters,
 } from './types/records.js';
-import { sendInChunks } from './batches.js';
+import { DEFAULT_REQUEST_INTERVAL_MS, sendInChunks } from './batches.js';
 import { appendQueryToEndpoint, airtableRequest } from './requests.js';
 import type { AirtableRetryOptions } from './requests.js';
 import { delay } from './utils.js';
+
+/**
+ * An empty ID would turn `/{recordId}` into the table's list endpoint, so the
+ * single-record helpers check it before sending anything.
+ */
+function requireRecordId(recordId: string) {
+  if (!recordId) {
+    throw new Error(
+      'Record ID is not set. Please provide a valid Airtable record ID.'
+    );
+  }
+}
 
 export function getRecord<Fields>({
   apiKey,
@@ -57,6 +69,7 @@ export async function getRecord<Fields>({
   options?: GetRecordQueryParameters;
   retry?: AirtableRetryOptions;
 }): Promise<AirtableRecord<Fields>> {
+  requireRecordId(recordId);
   const endpoint = appendQueryToEndpoint(`/${recordId}`, {
     cellFormat: options?.cellFormat,
     returnFieldsByFieldId: options?.returnFieldsByFieldId,
@@ -217,8 +230,7 @@ export async function* iterateRecordsPages<Fields>({
     currentOffset = response.offset;
 
     if (currentOffset) {
-      const interval: number = options?.requestInterval || 500;
-      await delay(interval);
+      await delay(options?.requestInterval ?? DEFAULT_REQUEST_INTERVAL_MS);
     }
   } while (currentOffset);
 }
@@ -313,6 +325,7 @@ export async function updateRecord<Fields>({
   };
   retry?: AirtableRetryOptions;
 }): Promise<AirtableRecord<Fields>> {
+  requireRecordId(recordId);
   return await airtableRequest<AirtableRecord<Fields>>({
     apiKey,
     baseId,
@@ -349,6 +362,7 @@ export async function replaceRecord<Fields>({
   };
   retry?: AirtableRetryOptions;
 }): Promise<AirtableRecord<Fields>> {
+  requireRecordId(recordId);
   return await airtableRequest<AirtableRecord<Fields>>({
     apiKey,
     baseId,
@@ -544,6 +558,7 @@ export async function deleteRecord({
   recordId: string;
   retry?: AirtableRetryOptions;
 }): Promise<DeleteRecordResponse> {
+  requireRecordId(recordId);
   return await airtableRequest<DeleteRecordResponse>({
     apiKey,
     baseId,

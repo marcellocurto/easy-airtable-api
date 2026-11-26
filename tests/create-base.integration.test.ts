@@ -1,3 +1,5 @@
+// Loads credentials from .env, like the other integration tests.
+import 'dotenv/config';
 import { describe, expect, test } from 'vitest';
 import { airtableRequestRaw, createBase } from '../src/index.js';
 
