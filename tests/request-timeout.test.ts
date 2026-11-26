@@ -68,7 +68,7 @@ function getRecord(maxRetries: number) {
   });
 }
 
-describe('airtableRequest socket timeouts', () => {
+describe('airtableRequest socket timeouts', { timeout: 2000 }, () => {
   beforeEach(() => {
     sleepMock.mockReset();
     sleepMock.mockResolvedValue(undefined);
@@ -79,44 +79,32 @@ describe('airtableRequest socket timeouts', () => {
     await new Promise((resolve) => server.close(resolve));
   });
 
-  it(
-    'rejects when Airtable never answers',
-    async () => {
-      await startServer(() => undefined);
+  it('rejects when Airtable never answers', async () => {
+    await startServer(() => undefined);
 
-      await expect(getRecord(0)).rejects.toThrow(/timed out/);
-    },
-    { timeout: 2000 }
-  );
+    await expect(getRecord(0)).rejects.toThrow(/timed out/);
+  });
 
-  it(
-    'rejects when Airtable stops sending the response body',
-    async () => {
-      await startServer((_req, res) => {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.write('{"id":');
-      });
+  it('rejects when Airtable stops sending the response body', async () => {
+    await startServer((_req, res) => {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.write('{"id":');
+    });
 
-      await expect(getRecord(0)).rejects.toThrow(/timed out/);
-    },
-    { timeout: 2000 }
-  );
+    await expect(getRecord(0)).rejects.toThrow(/timed out/);
+  });
 
-  it(
-    'retries a timed-out request and returns the later answer',
-    async () => {
-      let attempts = 0;
-      await startServer((_req, res) => {
-        attempts += 1;
-        if (attempts === 1) return;
+  it('retries a timed-out request and returns the later answer', async () => {
+    let attempts = 0;
+    await startServer((_req, res) => {
+      attempts += 1;
+      if (attempts === 1) return;
 
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(record));
-      });
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(record));
+    });
 
-      await expect(getRecord(1)).resolves.toEqual(record);
-      expect(attempts).toBe(2);
-    },
-    { timeout: 2000 }
-  );
+    await expect(getRecord(1)).resolves.toEqual(record);
+    expect(attempts).toBe(2);
+  });
 });

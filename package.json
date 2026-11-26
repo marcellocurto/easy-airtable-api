@@ -62,12 +62,12 @@
     "printWidth": 80
   },
   "devDependencies": {
-    "@types/node": "^20.11.30",
-    "@typescript-eslint/eslint-plugin": "^7.3.1",
-    "@typescript-eslint/parser": "^7.3.1",
+    "@types/node": "^22.20.7",
+    "@typescript-eslint/eslint-plugin": "^8.74.0",
+    "@typescript-eslint/parser": "^8.74.0",
     "dotenv": "^16.4.5",
     "eslint": "^8.57.0",
     "typescript": "^5.4.3",
-    "vitest": "^1.4.0"
+    "vitest": "^5.1.2"
   }
 }
