@@ -23,12 +23,13 @@ export function emittedInterfaces(schemaMode: SchemaMode): {
 }
 
 /**
- * The shared types that the given type expressions refer to, in import order,
- * so a generated file imports only what it uses.
+ * The shared types that the given generated declarations refer to, in import
+ * order, so a generated file imports only what it uses.
  */
-export function usedSharedTypes(typeExpressions: string[]): string[] {
-  // Choice names appear as string literals, so drop those before matching.
-  const code = typeExpressions.join(' ').replace(/"(?:[^"\\]|\\.)*"/g, '""');
+export function usedSharedTypes(declarations: string[]): string[] {
+  // Property keys and choice names are string literals, so drop those before
+  // matching.
+  const code = declarations.join(' ').replace(/"(?:[^"\\]|\\.)*"/g, '""');
   return SHARED_TYPE_IMPORTS.filter((name) =>
     new RegExp(`\\b${name}\\b`).test(code)
   );

@@ -293,16 +293,34 @@ describe('Airtable codegen', () => {
     await compileGeneratedOutput({ generatedContent: result.content });
   });
 
-  it('compiles under noUnusedLocals when the schema uses only some shared types', async () => {
-    const schema = await loadFixture('base-schema.json');
+  it.each(['read', 'write', 'full'] as const)(
+    'imports only the shared types a %s-mode file uses',
+    async (schemaMode) => {
+      const schema = await loadFixture('base-schema.json');
+      schema.tables[0].fields.push({
+        id: 'fldNamedLikeTypes',
+        name: 'Kind',
+        type: 'singleSelect',
+        // Choices named like shared types must not count as uses of them.
+        options: {
+          choices: [
+            { id: 'selA', name: 'Attachment' },
+            { id: 'selB', name: 'Collaborator' },
+          ],
+        },
+      });
 
-    const result = await buildAirtableTypes({ source: { schema } });
+      const result = await buildAirtableTypes({
+        source: { schema },
+        schemaMode,
+      });
 
-    await compileGeneratedOutput({
-      generatedContent: result.content,
-      compilerOptions: { noUnusedLocals: true },
-    });
-  });
+      await compileGeneratedOutput({
+        generatedContent: result.content,
+        compilerOptions: { noUnusedLocals: true },
+      });
+    }
+  );
 
   it('keeps line breaks in a table name inside the generated comment', async () => {
     const result = await buildAirtableTypes({
@@ -311,7 +329,7 @@ describe('Airtable codegen', () => {
           tables: [
             {
               id: 'tblInjected01',
-              name: 'Evil\nexport const injected = 1;\n//',
+              name: 'Evil\nexport const a = 1;\rexport const b = 2;\u2028export const c = 3;\n//',
               primaryFieldId: 'fldName00001',
               fields: [
                 { id: 'fldName00001', name: 'Name', type: 'singleLineText' },
@@ -322,8 +340,10 @@ describe('Airtable codegen', () => {
       },
     });
 
-    expect(result.content.split('\n')).not.toContain(
-      'export const injected = 1;'
+    // TypeScript ends a `//` comment at any of these line terminators.
+    const lines = result.content.split(/\r\n|[\r\n\u2028\u2029]/);
+    expect(lines.filter((line) => /^export const [abc] =/.test(line))).toEqual(
+      []
     );
     await compileGeneratedOutput({ generatedContent: result.content });
   });
@@ -339,6 +359,13 @@ describe('Airtable codegen', () => {
               primaryFieldId: 'fldName00001',
               fields: [
                 { id: 'fldName00001', name: 'Name', type: 'singleLineText' },
+                {
+                  // The older type name for the same field.
+                  id: 'fldLegacy0001',
+                  name: 'Legacy Source',
+                  type: 'syncSource',
+                  options: { choices: [{ id: 'sel3', name: 'Asana' }] },
+                },
                 {
                   id: 'fldSource0001',
                   name: 'Source',
@@ -368,6 +395,7 @@ describe('Airtable codegen', () => {
         ?.split('}')[0] ?? '';
 
     expect(recordFields).toContain('"Source"?: "Salesforce" | "Jira";');
+    expect(recordFields).toContain('"Legacy Source"?: "Asana";');
     expect(createFields).not.toContain('"Source"');
     expect(result.warnings).toEqual([]);
   });

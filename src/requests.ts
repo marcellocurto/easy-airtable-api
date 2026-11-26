@@ -306,8 +306,9 @@ export async function airtableApiRequest<T>(request: {
     path: resolvedPath,
   };
   // JavaScript callers can pass a lowercase method, which Node still sends as
-  // POST.
-  const idempotent = request.idempotent ?? method.toUpperCase() !== 'POST';
+  // POST, or none, which Node sends as GET.
+  const idempotent =
+    request.idempotent ?? (method ?? 'GET').toUpperCase() !== 'POST';
   const retryOptions = idempotent
     ? resolveRetryOptions(retry)
     : {

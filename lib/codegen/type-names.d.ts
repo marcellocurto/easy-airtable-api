@@ -7,10 +7,10 @@ export declare function emittedInterfaces(schemaMode: SchemaMode): {
     write: boolean;
 };
 /**
- * The shared types that the given type expressions refer to, in import order,
- * so a generated file imports only what it uses.
+ * The shared types that the given generated declarations refer to, in import
+ * order, so a generated file imports only what it uses.
  */
-export declare function usedSharedTypes(typeExpressions: string[]): string[];
+export declare function usedSharedTypes(declarations: string[]): string[];
 export interface TableTypeNames {
     recordFields: string;
     record: string;

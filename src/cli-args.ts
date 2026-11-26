@@ -21,10 +21,6 @@ const SWITCH_FLAGS = new Set(['--noTableIds', '--noFieldIds']);
 
 type ModeFlag = keyof typeof MODE_VALUES;
 
-function isModeFlag(flag: string): flag is ModeFlag {
-  return flag in MODE_VALUES;
-}
-
 function isOneOf<Value extends string>(
   allowed: readonly Value[],
   value: string
@@ -49,8 +45,10 @@ function readMode<Flag extends ModeFlag>(
 
 /**
  * Turns the arguments after `easy-airtable-api generate` into codegen options.
- * Options take `--flag value` or `--flag=value`, `--table` may repeat, and an
- * unknown option, a missing value, or an invalid mode is an error.
+ * Options take `--flag value` or `--flag=value`, `--table` may repeat, and a
+ * repeated option keeps its last value. An unknown option, a missing value, or
+ * an invalid mode is an error. Errors name the option but never repeat its
+ * value, since it may be a token.
  */
 export function parseGenerateArgs(
   args: string[]
@@ -69,24 +67,28 @@ export function parseGenerateArgs(
       continue;
     }
     if (!VALUE_FLAGS.has(flag)) {
-      throw new Error(`Unknown option: ${argument}`);
+      throw new Error(
+        flag.startsWith('--')
+          ? `Unknown option: ${flag}`
+          : 'Unexpected argument. Options start with --.'
+      );
     }
 
     let value: string | undefined;
     if (equals !== -1) {
       value = argument.slice(equals + 1);
     } else {
-      value = args[index + 1];
+      // In the space form, a following option means the value is missing.
+      value = args[index + 1]?.startsWith('--') ? undefined : args[index + 1];
       index += 1;
     }
-    if (!value || value.startsWith('--')) {
+    if (!value) {
       throw new Error(`Option ${flag} needs a value.`);
     }
 
     if (flag === '--table') {
       tables.push(value);
     } else {
-      if (isModeFlag(flag)) readMode(flag, value);
       values.set(flag, value);
     }
   }

@@ -175,4 +175,17 @@ describe('retries for requests that are not safe to repeat', () => {
     ).rejects.toMatchObject({ statusCode: 503 });
     expect(requestMock).toHaveBeenCalledTimes(1);
   });
+
+  it('sends a request with no method, as a JavaScript caller might, instead of throwing', async () => {
+    requestMock.mockImplementationOnce(respondWith(200, created));
+
+    await expect(
+      airtableRequestRaw({
+        apiKey: 'pat123',
+        // JavaScript callers aren't held to the required method type.
+        method: undefined as unknown as 'GET',
+        path: '/app123/tbl123',
+      })
+    ).resolves.toEqual(created);
+  });
 });

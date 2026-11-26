@@ -68,4 +68,38 @@ describe('parseGenerateArgs', () => {
       'Pass --schemaPath or --baseId.'
     );
   });
+
+  it('names a misspelled option without repeating its value', () => {
+    expect(() =>
+      parseGenerateArgs(['--baseId', 'app123', '--acessToken=pat123secret'])
+    ).toThrow(/^Unknown option: --acessToken$/);
+    expect(() =>
+      parseGenerateArgs(['--baseId', 'app123', 'pat123secret'])
+    ).toThrow(/^Unexpected argument/);
+  });
+
+  it('accepts a value that starts with -- in the --flag=value form', () => {
+    expect(
+      parseGenerateArgs(['--schemaPath', 's.json', '--table=--weird'])
+    ).toMatchObject({ tableNameOrId: ['--weird'] });
+  });
+
+  it('keeps the last value of a repeated option', () => {
+    expect(
+      parseGenerateArgs([
+        '--schemaPath',
+        's.json',
+        '--schemaMode',
+        'reed',
+        '--schemaMode',
+        'read',
+      ])
+    ).toMatchObject({ schemaMode: 'read' });
+  });
+
+  it('rejects a value given to a switch', () => {
+    expect(() =>
+      parseGenerateArgs(['--schemaPath', 's.json', '--noTableIds=x'])
+    ).toThrow('Unknown option: --noTableIds');
+  });
 });
