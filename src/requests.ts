@@ -24,7 +24,8 @@ export type AirtableRetryOptions = {
 const DEFAULT_RETRY_OPTIONS: Required<AirtableRetryOptions> = {
   maxRetries: 5,
   baseDelayMs: 500,
-  maxDelayMs: 8000,
+  // Long enough to wait out Airtable's 30-second rate-limit lockout.
+  maxDelayMs: 30000,
   retryOn429: true,
   retryOn5xx: true,
   retryOnNetworkErrors: true,
@@ -119,6 +120,12 @@ function shouldRetryError(
     return false;
   }
 
+  // When the server needs a longer wait than the caller allows, a retry would
+  // either sleep past the caller's limit or arrive too early to succeed.
+  if (requiredWaitMs(error) > retryOptions.maxDelayMs) {
+    return false;
+  }
+
   if (error.statusCode === 429) {
     return retryOptions.retryOn429;
   }
@@ -130,17 +137,45 @@ function shouldRetryError(
   return false;
 }
 
+// Node system error codes for connection failures that a later attempt can
+// get past: the connection was refused, reset, or timed out, the network was
+// unreachable, or DNS was briefly unavailable.
+const RETRYABLE_NETWORK_ERROR_CODES = new Set([
+  'ECONNREFUSED',
+  'ECONNRESET',
+  'EPIPE',
+  'ETIMEDOUT',
+  'ENETUNREACH',
+  'EHOSTUNREACH',
+  'EAI_AGAIN',
+  'ENOTFOUND',
+]);
+
+/**
+ * Checks the Node error that `apiRequest` keeps as `cause`. Matching on its
+ * code rather than message text keeps a response body that happens to mention
+ * "network" from being mistaken for a connection failure.
+ */
 function isRetryableNetworkError(error: unknown): boolean {
   if (!(error instanceof Error)) return false;
 
-  const message = error.message.toLowerCase();
+  const { cause } = error;
   return (
-    message.includes('socket hang up') ||
-    message.includes('timed out') ||
-    message.includes('econnreset') ||
-    message.includes('econnrefused') ||
-    message.includes('network')
+    cause instanceof Error &&
+    'code' in cause &&
+    typeof cause.code === 'string' &&
+    RETRYABLE_NETWORK_ERROR_CODES.has(cause.code)
   );
+}
+
+// After a 429, Airtable rejects every request for 30 seconds.
+// https://airtable.com/developers/web/api/rate-limits
+const RATE_LIMIT_LOCKOUT_MS = 30000;
+
+/** The shortest wait after which the server says a retry can succeed. */
+function requiredWaitMs(error: AirtableApiError): number {
+  if (error.retryAfterMs !== undefined) return error.retryAfterMs;
+  return error.statusCode === 429 ? RATE_LIMIT_LOCKOUT_MS : 0;
 }
 
 function getRetryDelayMs(
@@ -148,20 +183,15 @@ function getRetryDelayMs(
   attempt: number,
   retryOptions: Required<AirtableRetryOptions>
 ): number {
-  if (error.retryAfterMs !== undefined) {
-    return error.retryAfterMs;
-  }
-
   const cappedDelay = Math.min(
     retryOptions.baseDelayMs * 2 ** attempt,
     retryOptions.maxDelayMs
   );
+  const backoff = retryOptions.useJitter
+    ? Math.round(Math.random() * cappedDelay)
+    : cappedDelay;
 
-  if (!retryOptions.useJitter) {
-    return cappedDelay;
-  }
-
-  return Math.round(Math.random() * cappedDelay);
+  return Math.max(backoff, requiredWaitMs(error));
 }
 
 function parseRetryAfterMs(value: string | string[] | undefined): number | undefined {
@@ -239,12 +269,15 @@ export async function airtableApiRequest<T>(request: {
   body?: unknown;
   apiURL?: string;
   retry?: AirtableRetryOptions;
-  requestContext?: {
-    method: string;
-    baseId?: string;
-    tableId?: string;
-    path?: string;
-  };
+  /**
+   * Whether sending this request twice has the same effect as sending it
+   * once. Defaults to true for every method except POST. A request that is not
+   * safe to repeat is not resent after a 5xx or a dropped connection, because
+   * Airtable may already have applied it. It is still retried after a 429,
+   * which the library treats as a request Airtable did not process.
+   */
+  idempotent?: boolean;
+  requestContext?: RequestContext;
 }): Promise<T> {
   const {
     apiKey,
@@ -254,6 +287,7 @@ export async function airtableApiRequest<T>(request: {
     body,
     apiURL,
     retry,
+    idempotent = method !== 'POST',
     requestContext,
   } = request;
 
@@ -272,11 +306,17 @@ export async function airtableApiRequest<T>(request: {
     method,
     path: resolvedPath,
   };
-  const retryOptions = resolveRetryOptions(retry);
+  const retryOptions = idempotent
+    ? resolveRetryOptions(retry)
+    : {
+        ...resolveRetryOptions(retry),
+        retryOn5xx: false,
+        retryOnNetworkErrors: false,
+      };
 
   for (let attempt = 0; ; attempt += 1) {
     try {
-      const response = await apiRequest<T>({
+      const response = await apiRequest({
         url: buildAirtableApiUrl({
           apiURL,
           path: resolvedPath,
@@ -285,9 +325,8 @@ export async function airtableApiRequest<T>(request: {
         method,
         body,
       });
-      validateResponse(response, context);
 
-      return response.data;
+      return parseResponse<T>(response, context);
     } catch (error) {
       if (shouldRetryError(error, attempt, retryOptions)) {
         await delay(getRetryDelayMs(error, attempt, retryOptions));
@@ -350,8 +389,19 @@ export async function airtableRequest<T>(request: {
   body?: object;
   apiURL?: string;
   retry?: AirtableRetryOptions;
+  idempotent?: boolean;
 }): Promise<T> {
-  const { apiKey, baseId, tableId, endpoint, method, body, apiURL, retry } = request;
+  const {
+    apiKey,
+    baseId,
+    tableId,
+    endpoint,
+    method,
+    body,
+    apiURL,
+    retry,
+    idempotent,
+  } = request;
 
   if (!baseId) {
     throw new Error(
@@ -371,6 +421,7 @@ export async function airtableRequest<T>(request: {
     apiURL,
     path: `/${encodeURIComponent(baseId)}/${encodeURIComponent(tableId)}${endpoint}`,
     retry,
+    idempotent,
     requestContext: {
       method,
       baseId,
@@ -387,134 +438,110 @@ interface AirtableErrorResponse {
   };
 }
 
-function validateResponse<T>(
-  response: ApiResponse<T>,
-  requestContext: {
-    method: string;
-    baseId?: string;
-    tableId?: string;
-    path?: string;
+type RequestContext = {
+  method: string;
+  baseId?: string;
+  tableId?: string;
+  path?: string;
+};
+
+const STATUS_MESSAGES: Partial<Record<number, string>> = {
+  401: 'Incorrect API Key.',
+  403: 'Not authorized.',
+  404: 'Table or record not found.',
+  413: 'Request body is too large.',
+  422: 'Operation cannot be processed. Do the field names match?',
+  429: 'Too many requests to the Airtable server.',
+  503: 'Airtable service unavailable.',
+};
+
+function isRetryableStatus(statusCode: number | undefined): boolean {
+  return statusCode !== undefined && (statusCode === 429 || statusCode >= 500);
+}
+
+function messageForStatus(statusCode: number | undefined): string {
+  const message =
+    statusCode === undefined ? undefined : STATUS_MESSAGES[statusCode];
+  if (message) return message;
+  if (statusCode !== undefined && statusCode >= 500) {
+    return 'Airtable server error.';
   }
-) {
-  const statusCode = response.statusCode;
-  const retryAfterMs = parseRetryAfterMs(response.headers?.['retry-after']);
-  if (
-    statusCode !== undefined &&
-    statusCode >= 200 &&
-    statusCode < 300
-  )
-    return;
+  return 'Unexpected error.';
+}
 
-  const isAirtableError = (data: unknown): data is AirtableErrorResponse => {
-    return (
-      data !== null &&
-      typeof data === 'object' &&
-      'error' in data &&
-      typeof data.error === 'object' &&
-      data.error !== null &&
-      'message' in data.error &&
-      typeof data.error.message === 'string'
-    );
-  };
+function isAirtableError(data: unknown): data is AirtableErrorResponse {
+  return (
+    data !== null &&
+    typeof data === 'object' &&
+    'error' in data &&
+    typeof data.error === 'object' &&
+    data.error !== null &&
+    'message' in data.error &&
+    typeof data.error.message === 'string'
+  );
+}
 
-  if (response.data && isAirtableError(response.data)) {
-    throw new AirtableApiError({
-      message: response.data.error.message,
-      statusCode,
-      airtableType: response.data.error.type,
-      retryable: statusCode === 429 || statusCode === 500 || statusCode === 503,
-      request: requestContext,
-      retryAfterMs,
-    });
+/**
+ * Reads Airtable's `{ error: { type, message } }` payload from an error
+ * response. Gateways and proxies can answer with HTML or an empty body, which
+ * yields undefined so the error falls back to a message for its status code.
+ */
+function readAirtableError(
+  body: string
+): AirtableErrorResponse['error'] | undefined {
+  try {
+    const data: unknown = JSON.parse(body);
+    return isAirtableError(data) ? data.error : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Returns the parsed JSON body of a 2xx response, or undefined for a 204 No
+ * Content. Any other status throws an AirtableApiError carrying the status
+ * code, whatever the body contains.
+ */
+function parseResponse<T>(
+  response: ApiResponse,
+  requestContext: RequestContext
+): T {
+  const { statusCode, body } = response;
+
+  if (statusCode !== undefined && statusCode >= 200 && statusCode < 300) {
+    if (statusCode === 204) return undefined as T;
+
+    try {
+      return JSON.parse(body) as T;
+    } catch {
+      throw new Error(`Failed to parse response as JSON: ${body}`);
+    }
   }
 
-  if (statusCode === 401)
-    throw new AirtableApiError({
-      message: 'Incorrect API Key.',
-      statusCode,
-      retryable: false,
-      request: requestContext,
-      retryAfterMs,
-    });
-  else if (statusCode === 403)
-    throw new AirtableApiError({
-      message: 'Not authorized.',
-      statusCode,
-      retryable: false,
-      request: requestContext,
-      retryAfterMs,
-    });
-  else if (statusCode === 404)
-    throw new AirtableApiError({
-      message: 'Table or record not found.',
-      statusCode,
-      retryable: false,
-      request: requestContext,
-      retryAfterMs,
-    });
-  else if (statusCode === 413)
-    throw new AirtableApiError({
-      message: 'Request body is too large.',
-      statusCode,
-      retryable: false,
-      request: requestContext,
-      retryAfterMs,
-    });
-  else if (statusCode === 422) {
-    throw new AirtableApiError({
-      message: 'Operation cannot be processed. Do the field names match?',
-      statusCode,
-      retryable: false,
-      request: requestContext,
-      retryAfterMs,
-    });
-  } else if (statusCode === 429) {
-    throw new AirtableApiError({
-      message: 'Too many requests to the Airtable server.',
-      statusCode,
-      retryable: true,
-      request: requestContext,
-      retryAfterMs,
-    });
-  } else if (statusCode === 500)
-    throw new AirtableApiError({
-      message: 'Airtable server error.',
-      statusCode,
-      retryable: true,
-      request: requestContext,
-      retryAfterMs,
-    });
-  else if (statusCode === 503)
-    throw new AirtableApiError({
-      message: 'Airtable service unavailable.',
-      statusCode,
-      retryable: true,
-      request: requestContext,
-      retryAfterMs,
-    });
+  const airtableError = readAirtableError(body);
   throw new AirtableApiError({
-    message: 'Unexpected error.',
+    message: airtableError?.message ?? messageForStatus(statusCode),
     statusCode,
-    retryable: false,
+    airtableType: airtableError?.type,
+    retryable: isRetryableStatus(statusCode),
     request: requestContext,
-    retryAfterMs,
+    retryAfterMs: parseRetryAfterMs(response.headers?.['retry-after']),
   });
 }
 
-type ApiResponse<T> = {
-  data: T;
+type ApiResponse = {
+  body: string;
   statusCode?: number;
-  statusMessage?: string;
   headers?: IncomingMessage['headers'];
 };
 
-async function apiRequest<T>({
+async function apiRequest({
   url,
   method,
   apiKey,
   body,
-}: ApiRequest): Promise<ApiResponse<T>> {
-  return new Promise<ApiResponse<T>>((resolve, reject) => {
+}: ApiRequest): Promise<ApiResponse> {
+  return new Promise<ApiResponse>((resolve, reject) => {
     const { protocol, hostname, port, pathname, search } = new URL(url);
     // A custom apiURL can point at a plain-HTTP proxy or mock server on any
     // port, so both come from the URL rather than defaulting to HTTPS on 443.
@@ -533,38 +560,43 @@ async function apiRequest<T>({
     };
 
     const req = send(options, (res: IncomingMessage) => {
-      let data = '';
+      // Decode once at the end: a multi-byte UTF-8 character can be split
+      // across chunks, and decoding each chunk separately corrupts it.
+      const chunks: Buffer[] = [];
 
       res.on('data', (chunk: Buffer) => {
-        data += chunk;
+        chunks.push(chunk);
       });
 
       res.on('end', () => {
-        try {
-          resolve({
-            data: JSON.parse(data) as T,
-            statusCode: res.statusCode,
-            statusMessage: res.statusMessage,
-            headers: res.headers,
-          });
-        } catch (error) {
-          reject(new Error(`Failed to parse response as JSON: ${data}`));
-        }
+        resolve({
+          body: Buffer.concat(chunks).toString('utf8'),
+          statusCode: res.statusCode,
+          headers: res.headers,
+        });
       });
     });
 
     // Node only reports an idle socket; without destroying the request here,
     // a server that stops answering leaves this promise pending forever. The
-    // "timed out" message is what marks the error as retryable.
+    // ETIMEDOUT code is what marks the error as retryable.
     req.on('timeout', () => {
       req.destroy(
-        new Error(`Request timed out after ${options.timeout} ms of inactivity`)
+        Object.assign(
+          new Error(
+            `Request timed out after ${options.timeout} ms of inactivity`
+          ),
+          { code: 'ETIMEDOUT' }
+        )
       );
     });
 
+    // The original error stays as `cause` so retries can read its Node code.
     req.on('error', (error: Error) => {
       reject(
-        new Error(`airtableApi: ${error.message} (fn_${apiRequest.name})`)
+        new Error(`airtableApi: ${error.message} (fn_${apiRequest.name})`, {
+          cause: error,
+        })
       );
     });
 

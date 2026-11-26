@@ -239,8 +239,6 @@ describe('airtableRequestRaw', () => {
   });
 
   it('reuses shared structured errors and retry behavior', async () => {
-    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.5);
-
     requestMock
       .mockImplementationOnce((options, callback) => {
         const response = new EventEmitter() as EventEmitter & {
@@ -297,18 +295,14 @@ describe('airtableRequestRaw', () => {
         return req;
       });
 
-    try {
-      const result = await airtableRequestRaw<{ ok: boolean }>({
-        apiKey: 'pat123',
-        method: 'GET',
-        path: '/v0/meta/bases/app123/tables',
-      });
+    const result = await airtableRequestRaw<{ ok: boolean }>({
+      apiKey: 'pat123',
+      method: 'GET',
+      path: '/v0/meta/bases/app123/tables',
+    });
 
-      expect(result).toEqual({ ok: true });
-      expect(requestMock).toHaveBeenCalledTimes(2);
-      expect(sleepMock).toHaveBeenCalledWith(250);
-    } finally {
-      randomSpy.mockRestore();
-    }
+    expect(result).toEqual({ ok: true });
+    expect(requestMock).toHaveBeenCalledTimes(2);
+    expect(sleepMock).toHaveBeenCalledWith(30000);
   });
 });
